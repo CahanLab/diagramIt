@@ -70,7 +70,7 @@ button { cursor: pointer; }
 .lib-item:hover { border-color: var(--border); background: var(--bg); }
 .lib-item .preview { width: 48px; height: 44px; display: flex; align-items: center; justify-content: center; }
 .lib-item .preview svg { max-width: 48px; max-height: 44px; }
-.lib-item .label { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.15; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-item .label { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.15; max-width: 62px; max-height: 23px; overflow: hidden; }
 .lib-empty { padding: 20px; color: var(--muted); text-align: center; }
 .lib-special { display: grid; gap: 6px; padding: 8px; }
 .lib-special button { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); text-align: left; }
@@ -135,3 +135,9 @@ button { cursor: pointer; }
 .radio-list label { display: flex; align-items: center; gap: 4px; }
 .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 8px 14px; border-radius: 8px; z-index: 200; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
 .check { display: flex; align-items: center; gap: 6px; }
+
+.format-list { display: flex; flex-direction: column; gap: 6px; }
+.format-option { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; }
+.format-option.active { border-color: var(--accent); background: var(--accent-soft); }
+.format-option input { margin-top: 3px; }
+.format-option .desc { color: var(--muted); font-size: 12px; }

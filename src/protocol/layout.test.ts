@@ -43,11 +43,27 @@ describe('layoutProtocol classic', () => {
     const t = texts(L.cmds)
     for (const d of [0, 2, 16, 21, 28]) expect(t).toContain(`Day ${d}`)
   })
-  it('draws one media box per stage spanning its day range', () => {
-    const rects = L.cmds.filter((c) => c.t === 'rect') as Extract<Cmd, { t: 'rect' }>[]
+  it('draws one media box per stage spanning its day range (proportional spacing)', () => {
+    const Lp = layoutProtocol({ ...PODOCYTE_TEMPLATE, spacing: 'proportional' })
+    const rects = Lp.cmds.filter((c) => c.t === 'rect') as Extract<Cmd, { t: 'rect' }>[]
     const px = PODOCYTE_TEMPLATE.pxPerUnit
     const widths = rects.slice(0, 4).map((r) => r.w)
     expect(widths).toEqual([2 * px, 14 * px, 5 * px, 7 * px])
+  })
+  it('auto spacing widens short stages to fit their media text but never shrinks', () => {
+    const rects = L.cmds.filter((c) => c.t === 'rect') as Extract<Cmd, { t: 'rect' }>[]
+    const px = PODOCYTE_TEMPLATE.pxPerUnit
+    const widths = rects.slice(0, 4).map((r) => r.w)
+    expect(widths[0]).toBeGreaterThan(2 * px)
+    expect(widths[1]).toBeGreaterThanOrEqual(14 * px)
+    // boxes are contiguous
+    expect(rects[1]!.x).toBeCloseTo(rects[0]!.x + rects[0]!.w)
+  })
+  it('equal spacing gives every stage the same width', () => {
+    const Le = layoutProtocol({ ...PODOCYTE_TEMPLATE, spacing: 'equal' })
+    const rects = Le.cmds.filter((c) => c.t === 'rect') as Extract<Cmd, { t: 'rect' }>[]
+    const widths = rects.slice(0, 4).map((r) => Math.round(r.w))
+    expect(new Set(widths).size).toBe(1)
   })
   it('includes cell labels, markers and icons', () => {
     const t = texts(L.cmds)
@@ -62,7 +78,7 @@ describe('layoutProtocol classic', () => {
   it('omits cells and media when toggled off', () => {
     const L2 = layoutProtocol({ ...PODOCYTE_TEMPLATE, showCells: false, showMedia: false })
     expect(L2.cmds.filter((c) => c.t === 'icon')).toHaveLength(0)
-    expect(texts(L2.cmds)).not.toContain('100 ng/mL BMP-7')
+    expect(texts(L2.cmds).join('\n')).not.toContain('100 ng/mL BMP-7')
     expect(L2.height).toBeLessThan(L.height)
   })
 })

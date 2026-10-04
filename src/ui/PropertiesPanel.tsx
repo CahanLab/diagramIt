@@ -34,7 +34,8 @@ export function PropertiesPanel() {
   const openDialog = useEditor((s) => s.openDialog)
   void version
 
-  if (!canvas || selection.length === 0) {
+  const activeObj = canvas?.getActiveObject()
+  if (!canvas || selection.length === 0 || !activeObj) {
     return (
       <div className="props">
         <h4>Page</h4>
@@ -52,8 +53,9 @@ export function PropertiesPanel() {
     )
   }
 
-  const active = canvas.getActiveObject() as FabricObject
-  const objs = selection
+  const active = activeObj as FabricObject
+  const objs = selection.filter((o) => o.canvas === canvas)
+  if (objs.length === 0) return null
   const single = objs.length === 1 ? objs[0]! : null
   const apply = (fn: (o: FabricObject) => void) => {
     for (const o of objs) fn(o)

@@ -49,6 +49,12 @@ export interface Protocol {
   unit: ProtocolUnit
   /** Pixels per unit of time. */
   pxPerUnit: number
+  /**
+   * How stage widths relate to time: 'proportional' (strictly pxPerUnit),
+   * 'auto' (proportional, but every stage is widened to fit its text), or
+   * 'equal' (all stages the same width). Default 'auto'.
+   */
+  spacing?: 'proportional' | 'auto' | 'equal'
   stages: Stage[]
   /** Cell population at the very end (after the last stage). Optional. */
   endpoint?: Endpoint

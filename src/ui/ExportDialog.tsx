@@ -50,11 +50,18 @@ export function ExportDialog({ docName, onClose, notify }: { docName: string; on
       <div className="modal narrow">
         <header><span>Export figure</span><button onClick={onClose} aria-label="Close">×</button></header>
         <div className="body">
-          <div className="radio-list" style={{ flexDirection: 'column', gap: 8 }}>
-            <label><input type="radio" checked={format === 'pptx'} onChange={() => setFormat('pptx')} /> <b>PowerPoint (.pptx)</b> — one slide with the figure as vector graphics. In PowerPoint, right-click the figure → <i>Convert to Shape</i> to edit every element natively.</label>
-            <label><input type="radio" checked={format === 'svg'} onChange={() => setFormat('svg')} /> <b>SVG</b> — vector; imports into PowerPoint, Word, Illustrator, Inkscape.</label>
-            <label><input type="radio" checked={format === 'pdf'} onChange={() => setFormat('pdf')} /> <b>PDF</b> — vector; for journals and LaTeX.</label>
-            <label><input type="radio" checked={format === 'png'} onChange={() => setFormat('png')} /> <b>PNG</b> — raster at high resolution.</label>
+          <div className="format-list">
+            {([
+              ['pptx', 'PowerPoint (.pptx)', 'One slide with the figure as vector graphics. In PowerPoint, right-click the figure → Convert to Shape → Ungroup to edit every element natively.'],
+              ['svg', 'SVG', 'Vector. Imports into PowerPoint, Word, Illustrator and Inkscape.'],
+              ['pdf', 'PDF', 'Vector. For journals and LaTeX.'],
+              ['png', 'PNG', 'Raster at a chosen resolution.'],
+            ] as [Format, string, string][]).map(([f, title, desc]) => (
+              <label key={f} className={`format-option${format === f ? ' active' : ''}`}>
+                <input type="radio" checked={format === f} onChange={() => setFormat(f)} />
+                <span><b>{title}</b><br /><span className="desc">{desc}</span></span>
+              </label>
+            ))}
           </div>
           {format === 'png' && (
             <div className="field"><label>Resolution: {scale}× ({page.width * scale} × {page.height * scale} px)</label><input type="range" min={1} max={6} value={scale} onChange={(e) => setScale(Number(e.target.value))} /></div>

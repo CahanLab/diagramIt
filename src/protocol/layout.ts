@@ -57,6 +57,40 @@ export function layoutProtocol(p: Protocol): Layout {
   return p.layout === 'strip' ? layoutStrip(p) : layoutClassic(p)
 }
 
+/**
+ * Piecewise-linear mapping from time to x offset (px from the axis origin).
+ * Intervals between consecutive breakpoints get a width of at least `minWidths[i]`.
+ */
+export function timeMapper(p: Protocol, min: number, max: number, minWidthOf: (start: number, end: number) => number): (t: number) => number {
+  const px = Math.max(1, p.pxPerUnit)
+  const spacing = p.spacing ?? 'auto'
+  const breaks = Array.from(new Set([min, max, ...p.stages.flatMap((s) => [s.start, s.end])]))
+    .filter((t) => Number.isFinite(t) && t >= min && t <= max)
+    .sort((a, b) => a - b)
+  if (spacing === 'proportional' || breaks.length < 2) return (t) => (t - min) * px
+  const widths: number[] = []
+  for (let i = 0; i < breaks.length - 1; i++) {
+    const a = breaks[i]!
+    const b = breaks[i + 1]!
+    widths.push(Math.max((b - a) * px, minWidthOf(a, b)))
+  }
+  if (spacing === 'equal') {
+    const w = Math.max(...widths)
+    widths.fill(w)
+  }
+  const offsets = [0]
+  for (const w of widths) offsets.push(offsets[offsets.length - 1]! + w)
+  return (t) => {
+    if (t <= breaks[0]!) return (t - breaks[0]!) * px
+    for (let i = 0; i < breaks.length - 1; i++) {
+      const a = breaks[i]!
+      const b = breaks[i + 1]!
+      if (t <= b) return offsets[i]! + ((t - a) / (b - a)) * widths[i]!
+    }
+    return offsets[offsets.length - 1]! + (t - breaks[breaks.length - 1]!) * px
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Classic layout (Nature Protocols style)
 // ---------------------------------------------------------------------------
@@ -70,7 +104,17 @@ function layoutClassic(p: Protocol): Layout {
   const marginL = 70
   const marginR = 70
   const marginT = 10
-  const x = (t: number) => marginL + (t - min) * px
+  void px
+  // Minimum width each stage needs so its media lines, stage name and day labels fit.
+  const minWidthOf = (a: number, b: number) => {
+    const st = stages.find((s) => s.start <= a && s.end >= b)
+    const lines = st ? [...st.media, st.name] : []
+    const textW = Math.max(0, ...lines.map((l) => estimateTextWidth(l, fs)))
+    const dayW = estimateTextWidth(`${unitLabel} ${fmt(b)}`, fs) + 12
+    return Math.max(textW + 24, dayW, p.showCells ? fs * 5.6 + 20 : 0)
+  }
+  const map = timeMapper(p, min, max, minWidthOf)
+  const x = (t: number) => marginL + map(t)
   const axisY = marginT + fs * 2.2 + 16
   const axisEnd = x(max) + 50
   const cmds: Cmd[] = []
@@ -140,12 +184,8 @@ function layoutClassic(p: Protocol): Layout {
       const bx = x(s.start)
       const bw = x(s.end) - bx
       cmds.push({ t: 'rect', x: bx, y, w: bw, h: boxH, fill: s.color || '#ffffff', stroke: INK, strokeWidth: 1.5 })
-      const lines = s.media.length ? s.media : ['']
-      const textH = lines.length * lineH
-      let ty = y + (boxH - textH) / 2
-      for (const line of lines) {
-        cmds.push({ t: 'text', x: bx + bw / 2, y: ty, text: line, size: fs, align: 'center', baseline: 'top', maxWidth: Math.max(20, bw - 12) })
-        ty += lineH
+      if (s.media.length) {
+        cmds.push({ t: 'text', x: bx + bw / 2, y: y + boxH / 2, text: s.media.join('\n'), size: fs, align: 'center', baseline: 'middle', maxWidth: Math.max(20, bw - 12) })
       }
     }
     y += boxH + 10

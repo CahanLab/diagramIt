@@ -5,7 +5,11 @@ import { useEditor } from '../canvas/editorStore'
 import { FabricCanvas, recordHistory, resetHistory, withHistorySuspended } from '../canvas/FabricCanvas'
 import { DEFAULT_PAGE } from '../canvas/page'
 import { downloadText, safeFilename } from '../export/download'
+import { exportPdf } from '../export/pdf'
+import { exportPngDataUrl } from '../export/png'
+import { exportPptx } from '../export/pptx'
 import { AUTOSAVE_KEY, loadProject, normalizeProjectJson, serializeProject } from '../export/project'
+import { exportSvg } from '../export/svg'
 import { ProtocolEditor } from '../protocol/ProtocolEditor'
 import { loadTemplate, TEMPLATES } from '../templates'
 import { ExportDialog } from '../ui/ExportDialog'
@@ -77,6 +81,20 @@ export default function App() {
     useEditor.getState().markDirty(false)
     setDocName(TEMPLATES.find((t) => t.id === templateId)?.name ?? 'Untitled figure')
   }, [canvas, setZoom])
+
+  // Dev-only handle for automated testing.
+  useEffect(() => {
+    if (!canvas || !import.meta.env.DEV) return
+    ;(window as unknown as { __diagramit: unknown }).__diagramit = {
+      canvas,
+      store: useEditor,
+      exportSvg: (bg = true) => exportSvg(canvas, useEditor.getState().page, { background: bg }),
+      exportPng: (scale = 1) => exportPngDataUrl(canvas, useEditor.getState().page, { scale, transparent: false }),
+      exportPptx: () => exportPptx(exportSvg(canvas, useEditor.getState().page, { background: false }), useEditor.getState().page, docName),
+      exportPdf: () => exportPdf(exportSvg(canvas, useEditor.getState().page, { background: true }), useEditor.getState().page),
+      serialize: () => serializeProject(canvas, useEditor.getState().page, docName),
+    }
+  }, [canvas, docName])
 
   // Boot: restore autosave or load the sample template.
   useEffect(() => {

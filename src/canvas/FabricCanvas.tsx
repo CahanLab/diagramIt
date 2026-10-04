@@ -1,8 +1,8 @@
-import { Canvas, FabricObject, Point, type TPointerEventInfo } from 'fabric'
-import { AligningGuidelines } from 'fabric/extensions'
+import { Canvas, FabricObject, IText, Point, type TPointerEventInfo } from 'fabric'
 import { useEffect, useRef } from 'react'
 import { useEditor } from './editorStore'
 import { History } from './history'
+import { disposeGuides, installGuides } from './guides'
 import { clampZoom } from './page'
 import { ensurePage, fitPage, restore, snapshot } from './commands'
 import { attachTools } from './tools'
@@ -43,16 +43,28 @@ export async function redo(): Promise<void> {
 export function recordHistory(): void {
   const { canvas, setHistoryFlags, markDirty } = useEditor.getState()
   if (!canvas || suspend > 0) return
+  // While a text is being edited, wait for text:editing:exited to avoid partial-word snapshots.
+  const active = canvas.getActiveObject()
+  if (active instanceof IText && active.isEditing) return
   history.push(snapshot(canvas))
   setHistoryFlags(history.canUndo(), history.canRedo())
   markDirty(true)
 }
 
+let pendingTimer: number | undefined
+function scheduleHistory(): void {
+  if (suspend > 0) return
+  window.clearTimeout(pendingTimer)
+  pendingTimer = window.setTimeout(recordHistory, 250)
+}
+
 export function resetHistory(): void {
-  const { canvas, setHistoryFlags } = useEditor.getState()
+  const { canvas, setHistoryFlags, markDirty } = useEditor.getState()
   if (!canvas) return
+  window.clearTimeout(pendingTimer)
   history.reset(snapshot(canvas))
   setHistoryFlags(false, false)
+  markDirty(false)
 }
 
 export function FabricCanvas() {
@@ -89,18 +101,13 @@ export function FabricCanvas() {
     store.setCanvas(canvas)
     store.setZoom(fitPage(canvas, store.page))
 
-    const guides = new AligningGuidelines(canvas, { margin: 6, color: '#ec4899', width: 1 })
+    installGuides(canvas)
 
     // --- history wiring (debounced)
-    let timer: number | undefined
-    const schedule = () => {
-      window.clearTimeout(timer)
-      timer = window.setTimeout(recordHistory, 250)
-    }
-    canvas.on('object:added', schedule)
-    canvas.on('object:removed', schedule)
-    canvas.on('object:modified', schedule)
-    canvas.on('text:editing:exited', schedule)
+    canvas.on('object:added', scheduleHistory)
+    canvas.on('object:removed', scheduleHistory)
+    canvas.on('object:modified', scheduleHistory)
+    canvas.on('text:editing:exited', scheduleHistory)
 
     // --- selection wiring
     const syncSel = () => store.setSelection(canvas.getActiveObjects())
@@ -175,7 +182,7 @@ export function FabricCanvas() {
       host.removeEventListener('dragover', onDragOver)
       host.removeEventListener('drop', onDrop)
       toolsRef.current?.dispose()
-      guides.dispose()
+      disposeGuides()
       store.setCanvas(null)
       void canvas.dispose()
     }

@@ -172,6 +172,13 @@ export function ProtocolEditor({ target, onClose }: { target?: Group; onClose: (
                 <option value="strip">Compact strip (day ruler + bands)</option>
               </select>
             </div>
+            <div className="field"><label>Stage spacing</label>
+              <select value={p.spacing ?? 'auto'} onChange={(e) => update({ spacing: e.target.value as Protocol['spacing'] })}>
+                <option value="auto">Auto (time-scaled, widened to fit text)</option>
+                <option value="proportional">Strictly proportional to time</option>
+                <option value="equal">Equal width per stage</option>
+              </select>
+            </div>
             <div className="field"><label>Time unit</label>
               <select value={p.unit} onChange={(e) => update({ unit: e.target.value as Protocol['unit'] })}>
                 <option value="day">Days</option><option value="hour">Hours</option><option value="week">Weeks</option>

@@ -1,6 +1,7 @@
 import type { Canvas } from 'fabric'
 import type { PageSpec } from '../canvas/types'
 import { isPage } from '../canvas/commands'
+import { withoutGuides } from '../canvas/guides'
 
 /** Raster export of the page area at a scale factor (1 = page pixels). */
 export function exportPngDataUrl(canvas: Canvas, page: PageSpec, opts: { scale: number; transparent: boolean }): string {
@@ -14,7 +15,7 @@ export function exportPngDataUrl(canvas: Canvas, page: PageSpec, opts: { scale: 
   try {
     canvas.viewportTransform = [1, 0, 0, 1, 0, 0]
     canvas.enableRetinaScaling = false
-    return canvas.toDataURL({ format: 'png', multiplier: opts.scale, left: 0, top: 0, width: page.width, height: page.height, enableRetinaScaling: false })
+    return withoutGuides(() => canvas.toDataURL({ format: 'png', multiplier: opts.scale, left: 0, top: 0, width: page.width, height: page.height, enableRetinaScaling: false }))
   } finally {
     canvas.viewportTransform = vpt
     canvas.enableRetinaScaling = retina
