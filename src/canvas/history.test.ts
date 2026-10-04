@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest'
+import { History } from './history'
+
+describe('History', () => {
+  it('starts with nothing to undo', () => {
+    const h = new History()
+    h.reset('a')
+    expect(h.canUndo()).toBe(false)
+    expect(h.undo('a')).toBeNull()
+  })
+  it('undo returns previous snapshot and redo returns forward snapshot', () => {
+    const h = new History()
+    h.reset('a')
+    h.push('b')
+    h.push('c')
+    expect(h.canUndo()).toBe(true)
+    expect(h.undo('c')).toBe('b')
+    expect(h.undo('b')).toBe('a')
+    expect(h.undo('a')).toBeNull()
+    expect(h.redo('a')).toBe('b')
+    expect(h.redo('b')).toBe('c')
+    expect(h.redo('c')).toBeNull()
+  })
+  it('a new push after undo clears redo', () => {
+    const h = new History()
+    h.reset('a')
+    h.push('b')
+    h.undo('b')
+    h.push('z')
+    expect(h.canRedo()).toBe(false)
+    expect(h.undo('z')).toBe('a')
+  })
+  it('ignores duplicate consecutive pushes', () => {
+    const h = new History()
+    h.reset('a')
+    h.push('b')
+    h.push('b')
+    expect(h.undo('b')).toBe('a')
+    expect(h.canUndo()).toBe(false)
+  })
+  it('respects the limit', () => {
+    const h = new History(3)
+    h.reset('0')
+    for (let i = 1; i <= 10; i++) h.push(String(i))
+    expect(h.undo('10')).toBe('9')
+    expect(h.undo('9')).toBe('8')
+    expect(h.undo('8')).toBeNull()
+  })
+  it('round-trips object data inside snapshots (opaque strings)', () => {
+    const h = new History()
+    const withData = JSON.stringify({ objects: [{ type: 'Rect', data: { kind: 'icon', libraryId: 'cells.generic-cell' } }] })
+    h.reset(withData)
+    h.push(JSON.stringify({ objects: [] }))
+    const restored = JSON.parse(h.undo(JSON.stringify({ objects: [] }))!)
+    expect(restored.objects[0].data.libraryId).toBe('cells.generic-cell')
+  })
+})
