@@ -6,7 +6,10 @@
 export class History {
   private past: string[] = []
   private future: string[] = []
-  constructor(private readonly limit = 100) {}
+  private readonly limit: number
+  constructor(limit = 100) {
+    this.limit = limit
+  }
 
   push(snapshot: string): void {
     if (this.past[this.past.length - 1] === snapshot) return
