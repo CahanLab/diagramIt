@@ -34,6 +34,17 @@ local storage. Projects are saved as `.diagramit.json` files.
   axis with cells and media boxes) and *compact strip* (day ruler with bands).
   Stage spacing can be time-proportional, auto-widened to fit text, or equal.
   Double-click a timeline to edit it again.
+- **Developmental ontogeny** (toolbar button, library card, or Insert menu):
+  curated lineage graphs for mouse embryonic development (87 cell types,
+  E0–P0), hematopoiesis (71), human embryonic development (84, day 0 to
+  fetal) and the C. elegans embryonic lineage (56), plus a blank starter.
+  Edit nodes (label, stage, lineage, markers, icon, parents), stages and
+  lineages; hide, collapse or *emphasise* nodes (whole root-to-node paths stay
+  at full opacity while the rest fade); filter stages; choose tree or staged
+  (time-column) layout, horizontal or vertical, curved / straight /
+  orthogonal / **metro-map** edges, circle / pill / label / icon nodes,
+  colour by lineage or stage, spacing, legend and stage bands. The dialog
+  shows a live preview. Double-click an inserted ontogeny to edit it again.
 - **Drawing tools**: text, rectangle, rounded rectangle, ellipse, triangle,
   diamond, hexagon, star, line, arrow, elbow arrow, freehand pen.
 - **Editing**: move/scale/rotate handles, multi-select, group/ungroup,
@@ -68,12 +79,18 @@ local storage. Projects are saved as `.diagramit.json` files.
 src/canvas     Fabric.js canvas wrapper, editor store, tools, history, commands
 src/library    Icon contract, registry, recolouring, insertion, generators,
                items/<category>.ts (SVG strings using #PRIMARY / #SECONDARY)
-src/protocol   Timeline data model, pure layout engine, Fabric renderer, editor
+src/protocol   Timeline data model, pure layout engine, editor
+src/ontogeny   Lineage-graph model, curated graphs (graphs/*.ts), layout engine, editor
+src/draw       Shared drawing commands → Fabric renderer and SVG previewer
 src/export     SVG / PNG / PDF / PPTX / project file
 src/ui         Panels, toolbar, dialogs
 src/templates  Starter documents
 scripts/icon-sheet.ts   Render a category contact sheet (macOS) for review
 ```
+
+Adding an ontogeny: add `src/ontogeny/graphs/<name>.ts` exporting `graph: Ontogeny`
+(see `graphs/README.md` for the rules) and register it in `graphs/index.ts`; the
+graph test validates structure.
 
 Adding an icon: append a `LibraryItem` to the relevant `src/library/items/*.ts`
 module (see `src/library/types.ts` for the SVG rules) and run `npm test`; the

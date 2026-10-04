@@ -1,7 +1,7 @@
 import { Group } from 'fabric'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { sceneCenter } from '../canvas/commands'
+import { placeFitted } from '../canvas/fit'
 import { useEditor } from '../canvas/editorStore'
 import { itemsInCategory } from '../library/registry'
 import { ColorInput } from '../ui/ColorInput'
@@ -130,9 +130,7 @@ export function ProtocolEditor({ target, onClose }: { target?: Group; onClose: (
         await replaceProtocolGroup(canvas, target, p)
       } else {
         const g = await renderProtocol(p)
-        const c = sceneCenter(canvas)
-        g.set({ left: c.x - (g.width * g.scaleX) / 2, top: c.y - (g.height * g.scaleY) / 2 })
-        g.setCoords()
+        placeFitted(canvas, g, useEditor.getState().page)
         canvas.add(g)
         canvas.setActiveObject(g)
         canvas.requestRenderAll()

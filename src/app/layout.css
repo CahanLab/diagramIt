@@ -141,3 +141,34 @@ button { cursor: pointer; }
 .format-option.active { border-color: var(--accent); background: var(--accent-soft); }
 .format-option input { margin-top: 3px; }
 .format-option .desc { color: var(--muted); font-size: 12px; }
+
+/* Ontogeny editor */
+.modal.wide { width: min(1400px, 96vw); height: 92vh; }
+.onto-body { gap: 8px; }
+.onto-columns { display: grid; grid-template-columns: 460px 1fr; gap: 14px; flex: 1; min-height: 0; }
+.onto-left { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 0; padding-right: 4px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.tabs button { border: none; background: transparent; padding: 6px 10px; border-bottom: 2px solid transparent; color: var(--muted); }
+.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.onto-tree { border: 1px solid var(--border); border-radius: var(--radius); max-height: 300px; overflow-y: auto; font-size: 12px; }
+.onto-row { display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 0; cursor: pointer; border-left: 3px solid transparent; }
+.onto-row:hover { background: var(--bg); }
+.onto-row.selected { background: var(--accent-soft); border-left-color: var(--accent); }
+.onto-row.hidden-node .name { color: var(--muted); text-decoration: line-through; }
+.onto-row .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.onto-row .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,.2); }
+.onto-row .spacer { flex: 1; }
+.onto-row .icon-btn { border: none; background: transparent; color: var(--muted); padding: 2px; border-radius: 4px; display: inline-flex; }
+.onto-row .icon-btn:hover { background: #fff; color: var(--ink); }
+.onto-row .icon-btn.on { color: var(--accent); background: #fff; }
+.onto-list { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; }
+.onto-list input[type=text], .onto-list input:not([type]) { flex: 1; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; }
+.onto-list .icon-btn { border: none; background: transparent; color: var(--muted); padding: 2px 4px; border-radius: 4px; }
+.onto-appearance { display: flex; flex-direction: column; gap: 10px; }
+.onto-preview { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+.onto-preview .preview-meta { padding: 6px 10px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border); }
+.onto-preview .preview-box { flex: 1; overflow: auto; padding: 10px; }
+.onto-preview .preview-box svg { max-width: 100%; height: auto; }
+.template-card.active { border-color: var(--accent); }
+details > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.stage-card header input { padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; }

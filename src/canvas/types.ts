@@ -1,4 +1,4 @@
-export type ObjectKind = 'shape' | 'text' | 'icon' | 'protocol' | 'connector' | 'image' | 'group' | 'page'
+export type ObjectKind = 'shape' | 'text' | 'icon' | 'protocol' | 'ontogeny' | 'connector' | 'image' | 'group' | 'page'
 
 /** Custom data attached to every canvas object (serialised via toObject(['data'])). */
 export interface ObjectData {
@@ -11,6 +11,8 @@ export interface ObjectData {
   role?: 'primary' | 'secondary'
   /** Serialised protocol for timeline groups. */
   protocol?: unknown
+  /** Serialised { graph, view } for ontogeny groups. */
+  ontogeny?: unknown
   /** Arrow head configuration for connectors. */
   arrow?: { start: boolean; end: boolean; headSize: number }
   locked?: boolean

@@ -1,33 +1,9 @@
 import type { Protocol, Stage } from './types'
 import { UNIT_LABEL } from './types'
 
-/** Primitive drawing commands produced by the layout engine (absolute coordinates, origin top-left). */
-export type Cmd =
-  | { t: 'line'; x1: number; y1: number; x2: number; y2: number; stroke: string; width: number; arrow?: boolean }
-  | { t: 'rect'; x: number; y: number; w: number; h: number; fill: string; stroke?: string; strokeWidth?: number; rx?: number }
-  | {
-      t: 'text'
-      x: number
-      y: number
-      text: string
-      size: number
-      weight?: 'bold'
-      italic?: boolean
-      align: 'left' | 'center' | 'right'
-      baseline: 'top' | 'middle'
-      color?: string
-      /** Wrap width in px (omit for single-line). */
-      maxWidth?: number
-    }
-  | { t: 'icon'; x: number; y: number; w: number; h: number; iconId: string; color: string }
-
-export interface Layout {
-  width: number
-  height: number
-  cmds: Cmd[]
-}
-
-export const INK = '#1f2937'
+import { estimateTextWidth, INK, type Cmd, type Layout } from '../draw/types'
+export { INK, estimateTextWidth }
+export type { Cmd, Layout }
 
 /** Time extent of the protocol in units. Falls back to [0, 1] when empty. */
 export function protocolExtent(p: Protocol): { min: number; max: number } {
@@ -48,10 +24,6 @@ export function sortedStages(p: Protocol): Stage[] {
     .sort((a, b) => a.start - b.start)
 }
 
-/** Rough text width estimate (px) used only for sizing boxes; real text is measured by the renderer. */
-export function estimateTextWidth(text: string, size: number): number {
-  return text.length * size * 0.55
-}
 
 export function layoutProtocol(p: Protocol): Layout {
   return p.layout === 'strip' ? layoutStrip(p) : layoutClassic(p)

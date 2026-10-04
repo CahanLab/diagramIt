@@ -1,6 +1,6 @@
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalDistributeCenter, AlignStartHorizontal, AlignStartVertical, AlignVerticalDistributeCenter,
-  ArrowRight, BringToFront, Circle, Copy, CornerDownRight, Diamond, Group, Hand, Hexagon, Minus, MousePointer2, PenLine, Redo2, SendToBack, Square, SquareRoundCorner, Star, Trash2, Triangle, Type, Undo2, Ungroup, CalendarRange,
+  ArrowRight, BringToFront, Circle, Copy, CornerDownRight, Diamond, Group, Hand, Hexagon, Minus, MousePointer2, PenLine, Redo2, SendToBack, Square, SquareRoundCorner, Star, Trash2, Triangle, Type, Undo2, Ungroup, CalendarRange, GitBranch,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { alignSelection, deleteSelection, distributeSelection, duplicateSelection, groupSelection, reorder, ungroupSelection } from '../canvas/commands'
@@ -50,6 +50,9 @@ export function Toolbar() {
       <div className="group">
         <button className="tbtn wide" title="Insert differentiation timeline" onClick={() => openDialog({ kind: 'protocol' })}>
           <CalendarRange size={18} /> Timeline
+        </button>
+        <button className="tbtn wide" title="Insert developmental ontogeny (lineage graph)" onClick={() => openDialog({ kind: 'ontogeny' })}>
+          <GitBranch size={18} /> Ontogeny
         </button>
       </div>
       <div className="group">

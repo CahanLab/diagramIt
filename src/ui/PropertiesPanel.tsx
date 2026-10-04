@@ -5,6 +5,7 @@ import { dataOf, flipSelection, setLocked } from '../canvas/commands'
 import { useEditor } from '../canvas/editorStore'
 import { iconDataOf, recolorIcon } from '../library/insert'
 import { findItem } from '../library/registry'
+import { ontogenyOf } from '../ontogeny/render'
 import { protocolOf } from '../protocol/render'
 import { ColorInput } from './ColorInput'
 
@@ -67,9 +68,10 @@ export function PropertiesPanel() {
   const first = objs[0]!
   const iconData = iconDataOf(single ?? undefined)
   const protocol = protocolOf(single ?? undefined)
+  const ontogeny = ontogenyOf(single ?? undefined)
   const isText = objs.every((o) => o instanceof IText)
   const anyText = objs.some((o) => o instanceof IText)
-  const isPlainShape = !iconData && !protocol && !(first instanceof Group) && !(first instanceof ActiveSelection)
+  const isPlainShape = !iconData && !protocol && !ontogeny && !(first instanceof Group) && !(first instanceof ActiveSelection)
   const isConnector = dataOf(first)?.kind === 'connector'
   const locked = !!dataOf(first)?.locked
   const textObj = isText ? (first as Textbox) : null
@@ -81,11 +83,17 @@ export function PropertiesPanel() {
 
   return (
     <div className="props">
-      <h4>{objs.length > 1 ? `${objs.length} objects` : iconData ? findItem(iconData.libraryId ?? '')?.name ?? 'Icon' : protocol ? 'Differentiation timeline' : isText ? 'Text' : isConnector ? 'Connector' : first instanceof Group ? 'Group' : 'Shape'}</h4>
+      <h4>{objs.length > 1 ? `${objs.length} objects` : iconData ? findItem(iconData.libraryId ?? '')?.name ?? 'Icon' : protocol ? 'Differentiation timeline' : ontogeny ? `Ontogeny: ${ontogeny.graph.name}` : isText ? 'Text' : isConnector ? 'Connector' : first instanceof Group ? 'Group' : 'Shape'}</h4>
 
       {protocol && (
         <div className="btn-row">
           <button className="btn primary" onClick={() => openDialog({ kind: 'protocol', target: single! })}>Edit timeline…</button>
+        </div>
+      )}
+
+      {ontogeny && (
+        <div className="btn-row">
+          <button className="btn primary" onClick={() => openDialog({ kind: 'ontogeny', target: single! })}>Edit ontogeny…</button>
         </div>
       )}
 

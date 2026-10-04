@@ -10,6 +10,7 @@ import { exportPngDataUrl } from '../export/png'
 import { exportPptx } from '../export/pptx'
 import { AUTOSAVE_KEY, loadProject, normalizeProjectJson, serializeProject } from '../export/project'
 import { exportSvg } from '../export/svg'
+import { OntogenyEditor } from '../ontogeny/OntogenyEditor'
 import { ProtocolEditor } from '../protocol/ProtocolEditor'
 import { loadTemplate, TEMPLATES } from '../templates'
 import { ExportDialog } from '../ui/ExportDialog'
@@ -178,6 +179,7 @@ export default function App() {
         </Menu>
         <Menu label="Insert">
           <MenuItem label="Differentiation timeline…" onClick={() => openDialog({ kind: 'protocol' })} />
+          <MenuItem label="Developmental ontogeny (lineage graph)…" onClick={() => openDialog({ kind: 'ontogeny' })} />
           <MenuItem label="Parametric object (cluster / plate / dish)…" onClick={() => openDialog({ kind: 'templates' })} />
           <div className="sep" />
           <MenuItem label="Text" shortcut="T" onClick={() => useEditor.getState().setTool('text')} />
@@ -218,6 +220,7 @@ export default function App() {
       </div>
 
       {dialog?.kind === 'protocol' && <ProtocolEditor target={dialog.target instanceof Group ? dialog.target : undefined} onClose={() => { close(); recordHistory() }} />}
+      {dialog?.kind === 'ontogeny' && <OntogenyEditor target={dialog.target instanceof Group ? dialog.target : undefined} onClose={() => { close(); recordHistory() }} />}
       {dialog?.kind === 'export' && <ExportDialog docName={docName} onClose={close} notify={notify} />}
       {dialog?.kind === 'page' && <PageDialog onClose={close} />}
       {dialog?.kind === 'templates' && <ParametricDialog onClose={close} />}
@@ -244,7 +247,7 @@ function HelpDialog({ onClose }: { onClose: () => void }) {
     ['Arrows (+Shift)', 'Nudge 1 px (10 px)'],
     ['⌘ + scroll, ⌘0, ⌘1', 'Zoom at cursor, fit page, 100%'],
     ['Space + drag, scroll', 'Pan'],
-    ['Double-click', 'Edit text, or edit a timeline'],
+    ['Double-click', 'Edit text, a timeline, or an ontogeny'],
     ['Enter', 'Edit selected text'],
     ['⌘S / ⌘O / ⌘E', 'Save / Open project / Export'],
   ]

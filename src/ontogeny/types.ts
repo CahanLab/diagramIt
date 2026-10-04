@@ -72,6 +72,8 @@ export interface OntogenyView {
   edgeStyle: 'curve' | 'straight' | 'orthogonal' | 'metro'
   /** Node glyph. */
   nodeStyle: 'circle' | 'pill' | 'label' | 'icon'
+  /** Staged layout: space columns proportionally to stage `time` instead of evenly. */
+  proportional?: boolean
   /** Node ids hidden from the drawing (their descendants are hidden too unless re-parented). */
   hidden: string[]
   /** Node ids whose subtrees are collapsed into the node. */

@@ -1,4 +1,4 @@
-import { CalendarRange, ChevronDown, ChevronRight, Grid3x3, Search } from 'lucide-react'
+import { CalendarRange, ChevronDown, ChevronRight, GitBranch, Grid3x3, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { sceneCenter } from '../canvas/commands'
 import { useEditor } from '../canvas/editorStore'
@@ -59,6 +59,10 @@ export function LibraryPanel() {
               <button onClick={() => openDialog({ kind: 'protocol' })}>
                 <CalendarRange size={22} />
                 <div><b>Differentiation timeline</b><span>Day axis, stages, cell types, media changes</span></div>
+              </button>
+              <button onClick={() => openDialog({ kind: 'ontogeny' })}>
+                <GitBranch size={22} />
+                <div><b>Developmental ontogeny</b><span>Mouse / human embryo, hematopoiesis, C. elegans lineage graphs</span></div>
               </button>
               <button onClick={() => openDialog({ kind: 'templates' })}>
                 <Grid3x3 size={22} />

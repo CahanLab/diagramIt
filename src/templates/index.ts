@@ -4,12 +4,17 @@ import { findItem } from '../library/registry'
 import { renderProtocol } from '../protocol/render'
 import { MESENDODERM_STRIP_TEMPLATE, PODOCYTE_TEMPLATE } from '../protocol/templates'
 import { createText } from '../canvas/tools'
+import { findOntogeny } from '../ontogeny/graphs'
+import { renderOntogeny } from '../ontogeny/render'
+import { DEFAULT_VIEW } from '../ontogeny/types'
 
 export const TEMPLATES: { id: string; name: string; description: string }[] = [
   { id: 'blank', name: 'Blank figure', description: 'Empty 16:9 page' },
   { id: 'ipsc-classic', name: 'iPSC differentiation (classic)', description: 'Day axis, cells with markers, media boxes' },
   { id: 'ipsc-strip', name: 'iPSC differentiation (compact strip)', description: 'Day ruler with coloured media bands' },
   { id: 'workflow', name: 'Experimental workflow', description: 'Dish → treatment → assay → analysis' },
+  { id: 'hematopoiesis', name: 'Hematopoiesis tree', description: 'Lineage tree from HSC to mature blood cells' },
+  { id: 'mouse-metro', name: 'Mouse development (metro map)', description: 'Staged lineage map in metro style' },
 ]
 
 export async function loadTemplate(canvas: Canvas, id: string): Promise<void> {
@@ -32,6 +37,20 @@ export async function loadTemplate(canvas: Canvas, id: string): Promise<void> {
   if (id === 'ipsc-strip') {
     const g = await renderProtocol(MESENDODERM_STRIP_TEMPLATE)
     g.set({ left: 120, top: 120 })
+    g.setCoords()
+    canvas.add(g)
+    canvas.discardActiveObject()
+    return
+  }
+  if (id === 'hematopoiesis' || id === 'mouse-metro') {
+    const graph = findOntogeny(id === 'hematopoiesis' ? 'hematopoiesis' : 'mouse-embryo')
+    if (!graph) return
+    const view = id === 'hematopoiesis'
+      ? { ...DEFAULT_VIEW, layout: 'tree' as const, edgeStyle: 'curve' as const, nodeGap: 26, levelGap: 150, fontSize: 12 }
+      : { ...DEFAULT_VIEW, layout: 'staged' as const, edgeStyle: 'metro' as const, nodeGap: 24, levelGap: 120, fontSize: 11, showStageBands: true }
+    const g = await renderOntogeny({ graph: structuredClone(graph), view })
+    const scale = Math.min(1, 1500 / (g.width * g.scaleX), 820 / (g.height * g.scaleY))
+    g.set({ left: 50, top: 40, scaleX: scale, scaleY: scale })
     g.setCoords()
     canvas.add(g)
     canvas.discardActiveObject()

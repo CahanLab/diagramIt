@@ -9,6 +9,7 @@ import { attachTools } from './tools'
 import { findItem } from '../library/registry'
 import { insertLibraryItem } from '../library/insert'
 import { protocolOf } from '../protocol/render'
+import { ontogenyOf } from '../ontogeny/render'
 
 /** Shared history instance so toolbar/shortcuts can call undo/redo. */
 export const history = new History(100)
@@ -123,6 +124,7 @@ export function FabricCanvas() {
     canvas.on('mouse:dblclick', (e: TPointerEventInfo) => {
       const t = e.target
       if (t && protocolOf(t)) store.openDialog({ kind: 'protocol', target: t })
+      else if (t && ontogenyOf(t)) store.openDialog({ kind: 'ontogeny', target: t })
     })
 
     // --- wheel: zoom with ctrl/cmd, otherwise pan

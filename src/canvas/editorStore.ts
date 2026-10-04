@@ -15,7 +15,7 @@ export interface EditorState {
   canRedo: boolean
   dirty: boolean
   /** Which modal dialog is open. */
-  dialog: null | { kind: 'protocol'; target?: FabricObject } | { kind: 'export' } | { kind: 'page' } | { kind: 'templates' } | { kind: 'about' }
+  dialog: null | { kind: 'protocol'; target?: FabricObject } | { kind: 'ontogeny'; target?: FabricObject } | { kind: 'export' } | { kind: 'page' } | { kind: 'templates' } | { kind: 'about' }
   setCanvas: (c: Canvas | null) => void
   setTool: (t: ToolId) => void
   setPage: (p: PageSpec) => void
