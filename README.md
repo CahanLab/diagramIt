@@ -39,8 +39,13 @@ local storage. Projects are saved as `.diagramit.json` files.
   E0–P0), hematopoiesis (71), human embryonic development (84, day 0 to
   fetal) and the C. elegans embryonic lineage (56), plus a blank starter.
   Edit nodes (label, stage, lineage, markers, icon, parents), stages and
-  lineages; hide, collapse or *emphasise* nodes (whole root-to-node paths stay
-  at full opacity while the rest fade); filter stages; choose tree or staged
+  lineages; add children, delete a node (progeny re-attach to its parent) or a
+  whole subtree; hide a node alone (progeny reconnect to the nearest visible
+  ancestor, or become new roots), hide a subtree, collapse, or *emphasise*
+  nodes (whole root-to-node paths stay at full opacity while the rest fade);
+  restrict to a stage range (e.g. oligopotent → precursor) without losing the
+  progeny; override colour, shape, size and label style per node and colour,
+  width, dash and label per edge; zoom the live preview; choose tree or staged
   (time-column) layout, horizontal or vertical, curved / straight /
   orthogonal / **metro-map** edges, circle / pill / label / icon nodes,
   colour by lineage or stage, spacing, legend and stage bands. The dialog

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_VIEW, type Ontogeny, type OntogenyView } from './types'
-import { emphasisSet, layoutOntogeny, rootPath, visibleGraph, wrapLabel } from './layout'
+import { emphasisSet, layoutOntogeny, rootPath, rootsOf, visibleGraph, wrapLabel } from './layout'
 import type { Cmd } from '../draw/types'
 
 const G: Ontogeny = {
@@ -35,6 +35,28 @@ describe('visibleGraph', () => {
   it('filters by stage', () => {
     const v = visibleGraph(G, { ...V, stages: ['s0', 's1'] })
     expect(v.nodes.map((n) => n.id).sort()).toEqual(['a1', 'b1', 'root'])
+  })
+  it('excluding early stages keeps progeny and re-roots them', () => {
+    const v = visibleGraph(G, { ...V, stages: ['s1', 's2'] })
+    expect(v.nodes.map((n) => n.id).sort()).toEqual(['a1', 'a2', 'a3', 'b1', 'b2'])
+    expect(rootsOf(v.nodes).map((n) => n.id).sort()).toEqual(['a1', 'b1'])
+    const L = layoutOntogeny(G, { ...V, stages: ['s1', 's2'] })
+    expect(L.nodes.length).toBe(5)
+  })
+  it('hiddenSelf removes one node and reconnects its children to the grandparent', () => {
+    const v = visibleGraph(G, { ...V, hiddenSelf: ['a1'] })
+    const a2 = v.nodes.find((n) => n.id === 'a2')!
+    expect(a2.parents).toEqual(['root'])
+    const b2 = v.nodes.find((n) => n.id === 'b2')!
+    expect(b2.parents).toEqual(['b1', 'root'])
+    expect(v.nodes.some((n) => n.id === 'a1')).toBe(false)
+  })
+  it('a forest lays out every root with finite geometry', () => {
+    const L = layoutOntogeny(G, { ...V, hiddenSelf: ['root'] })
+    expect(L.nodes.map((n) => n.id).sort()).toEqual(['a1', 'a2', 'a3', 'b1', 'b2'])
+    const pos = Object.fromEntries(L.nodes.map((n) => [n.id, n]))
+    expect(pos.a1!.x).toBeCloseTo(pos.b1!.x)
+    expect(Math.abs(pos.a1!.y - pos.b1!.y)).toBeGreaterThan(V.nodeGap)
   })
 })
 
@@ -141,5 +163,18 @@ describe('wrapLabel', () => {
     const w = wrapLabel('Megakaryocyte-erythroid progenitor (MEP)', 150, 13)
     expect(w.split('\n').length).toBeGreaterThan(1)
     expect(w.replace(/\n/g, ' ')).toBe('Megakaryocyte-erythroid progenitor (MEP)')
+  })
+})
+
+describe('style overrides', () => {
+  it('applies node colour, shape and edge overrides', () => {
+    const L = layoutOntogeny(G, { ...V, nodeStyles: { a2: { color: '#123456', shape: 'square', labelBold: true, sizeScale: 2 } }, edgeStyles: { 'a1>a2': { color: '#abcdef', dashed: true, label: 'commit' } } })
+    const rects = L.cmds.filter((c) => c.t === 'rect') as Extract<Cmd, { t: 'rect' }>[]
+    expect(rects.some((r) => r.fill === '#123456' && r.w === V.nodeSize * 2 * 2 * 1.15)).toBe(true)
+    const paths = L.cmds.filter((c) => c.t === 'path') as Extract<Cmd, { t: 'path' }>[]
+    expect(paths.some((p) => p.stroke === '#abcdef' && p.dash)).toBe(true)
+    const texts = L.cmds.filter((c) => c.t === 'text') as Extract<Cmd, { t: 'text' }>[]
+    expect(texts.some((t) => t.text === 'commit')).toBe(true)
+    expect(texts.some((t) => t.text === 'A2' && t.weight === 'bold')).toBe(true)
   })
 })

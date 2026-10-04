@@ -75,40 +75,68 @@ export function rootPath(graph: Ontogeny, id: string): string[] {
 }
 
 export interface VisibleGraph {
+  /** Visible nodes with `parents` rewritten to the nearest visible ancestors. */
   nodes: OntogenyNode[]
   collapsedCounts: Map<string, number>
 }
 
-/** Apply hidden / collapsed / stage filters. Hidden and collapsed subtrees are removed. */
+/**
+ * Apply visibility rules:
+ * - `hidden`: node and its whole subtree are removed;
+ * - `hiddenSelf` and nodes in excluded stages: the node alone is removed and its
+ *   children are reconnected to the nearest visible ancestor (or become roots);
+ * - `collapsed`: descendants are removed and counted.
+ */
 export function visibleGraph(graph: Ontogeny, view: OntogenyView): VisibleGraph {
   const stageSet = view.stages.length ? new Set(view.stages) : null
-  let nodes = graph.nodes.filter((n) => !stageSet || !n.stage || stageSet.has(n.stage))
-  const remove = new Set<string>()
+  const byId = new Map(graph.nodes.map((n) => [n.id, n]))
+  const removed = new Set<string>()
   for (const h of view.hidden) {
-    remove.add(h)
-    for (const d of descendants(graph.nodes, h)) remove.add(d)
+    removed.add(h)
+    for (const d of descendants(graph.nodes, h)) removed.add(d)
   }
-  const collapsedCounts = new Map<string, number>()
-  for (const c of view.collapsed) {
-    if (remove.has(c)) continue
-    const d = descendants(nodes.filter((n) => !remove.has(n.id)), c)
-    collapsedCounts.set(c, d.size)
-    for (const x of d) remove.add(x)
-  }
-  nodes = nodes.filter((n) => !remove.has(n.id))
-  // keep connectivity: a node whose primary parent was removed is dropped too (unless it is the root)
-  const root = rootOf(graph.nodes)
-  let changed = true
-  while (changed) {
-    changed = false
-    const ids = new Set(nodes.map((n) => n.id))
-    const next = nodes.filter((n) => n.id === root?.id || n.parents.some((p) => ids.has(p)))
-    if (next.length !== nodes.length) {
-      nodes = next
-      changed = true
+  const bypass = new Set<string>()
+  for (const id of view.hiddenSelf ?? []) if (!removed.has(id)) bypass.add(id)
+  for (const n of graph.nodes) if (stageSet && n.stage && !stageSet.has(n.stage) && !removed.has(n.id)) bypass.add(n.id)
+  const isVisible = (id: string) => byId.has(id) && !removed.has(id) && !bypass.has(id)
+  /** Walk up through bypassed nodes until a visible ancestor; undefined if none. */
+  const resolve = (pid: string): string | undefined => {
+    let cur: string | undefined = pid
+    const seen = new Set<string>()
+    while (cur && !seen.has(cur)) {
+      seen.add(cur)
+      if (isVisible(cur)) return cur
+      if (removed.has(cur)) return undefined
+      cur = byId.get(cur)?.parents[0]
     }
+    return undefined
   }
+  let nodes: OntogenyNode[] = graph.nodes
+    .filter((n) => isVisible(n.id))
+    .map((n) => {
+      const parents: string[] = []
+      for (const p of n.parents) {
+        const r = resolve(p)
+        if (r && r !== n.id && !parents.includes(r)) parents.push(r)
+      }
+      return { ...n, parents }
+    })
+  const collapsedCounts = new Map<string, number>()
+  const collapsedRemove = new Set<string>()
+  for (const c of view.collapsed) {
+    if (!nodes.some((n) => n.id === c)) continue
+    const d = descendants(nodes, c)
+    collapsedCounts.set(c, d.size)
+    for (const x of d) collapsedRemove.add(x)
+  }
+  nodes = nodes.filter((n) => !collapsedRemove.has(n.id)).map((n) => ({ ...n, parents: n.parents.filter((p) => !collapsedRemove.has(p)) }))
   return { nodes, collapsedCounts }
+}
+
+/** Roots of a (possibly re-rooted) visible node list: nodes with no parent among `nodes`. */
+export function rootsOf(nodes: OntogenyNode[]): OntogenyNode[] {
+  const ids = new Set(nodes.map((n) => n.id))
+  return nodes.filter((n) => !n.parents.some((p) => ids.has(p)))
 }
 
 /** Node ids to draw at full opacity when emphasis is active: union of root paths of emphasised nodes. */
@@ -144,9 +172,11 @@ export function layoutOntogeny(graph: Ontogeny, view: OntogenyView): OntogenyLay
   const horizontal = view.orientation === 'horizontal'
   const emph = emphasisSet(graph, view)
   const ch = childrenMap(nodes)
-  const root = rootOf(nodes)
+  const roots = rootsOf(nodes)
   const placed = new Map<string, PlacedNode>()
-  if (!root) return { width: 10, height: 10, cmds: [], nodes: [] }
+  if (!roots.length) return { width: 10, height: 10, cmds: [], nodes: [] }
+  const nodeStyles = view.nodeStyles ?? {}
+  const edgeStyles = view.edgeStyles ?? {}
 
   // --- level (depth or stage)
   const stageIds = view.stages.length ? graph.stages.filter((s) => view.stages.includes(s.id)).map((s) => s.id) : graph.stages.map((s) => s.id)
@@ -156,12 +186,12 @@ export function layoutOntogeny(graph: Ontogeny, view: OntogenyView): OntogenyLay
     let level = depth
     if (view.layout === 'staged') {
       level = n.stage && stageIndex.has(n.stage) ? stageIndex.get(n.stage)! : parentLevel + 1
-      if (level <= parentLevel && n.id !== root.id) level = parentLevel + 1
+      if (level <= parentLevel && parentLevel >= 0) level = parentLevel + 1
     }
     levelOf.set(n.id, level)
     for (const c of ch.get(n.id) ?? []) assignLevels(c, depth + 1, level)
   }
-  assignLevels(root, 0, -1)
+  for (const r of roots) assignLevels(r, 0, -1)
   const maxLevel = Math.max(...levelOf.values())
 
   // --- level positions (px). Staged layouts can be proportional to stage time.
@@ -207,14 +237,18 @@ export function layoutOntogeny(graph: Ontogeny, view: OntogenyView): OntogenyLay
       cross = (cs[0]! + cs[cs.length - 1]!) / 2
     }
     const faded = !!emph && !emph.has(n.id)
-    const color = view.colorBy === 'lineage' ? lineageColorOf(graph, n.id) : view.colorBy === 'stage' ? STAGE_PALETTE[(n.stage ? stageIndex.get(n.stage) ?? 0 : levelOf.get(n.id)!) % STAGE_PALETTE.length]! : '#6b7280'
+    const baseColor = view.colorBy === 'lineage' ? lineageColorOf(graph, n.id) : view.colorBy === 'stage' ? STAGE_PALETTE[(n.stage ? stageIndex.get(n.stage) ?? 0 : levelOf.get(n.id)!) % STAGE_PALETTE.length]! : '#6b7280'
+    const color = nodeStyles[n.id]?.color ?? baseColor
     placed.set(n.id, {
       id: n.id, label: displayLabel(n, kids.length === 0), level: levelOf.get(n.id)!, cross, x: 0, y: 0, color, faded,
       terminal: !!n.terminal, markers: n.markers, iconId: n.iconId, collapsedCount: collapsedCounts.get(n.id) ?? 0, isLeaf: kids.length === 0,
     })
     return cross
   }
-  place(root)
+  roots.forEach((r, i) => {
+    if (i > 0) cursor += view.nodeGap * 0.8
+    place(r)
+  })
 
   // --- to absolute coordinates
   const marginL = 40
@@ -233,7 +267,7 @@ export function layoutOntogeny(graph: Ontogeny, view: OntogenyView): OntogenyLay
 
   const cmds: Cmd[] = []
   const fade = (id: string) => (placed.get(id)?.faded ? view.fadeOpacity : 1)
-  const r = view.nodeSize
+  const r0 = view.nodeSize
   const edgeW = view.edgeStyle === 'metro' ? view.edgeWidth * 2.6 : view.edgeWidth
 
   // --- stage bands & axis (staged layout)
@@ -319,10 +353,14 @@ export function layoutOntogeny(graph: Ontogeny, view: OntogenyView): OntogenyLay
       const emphasised = emph ? emph.has(n.id) && emph.has(pid) : true
       const w = emphasised ? edgeW : edgeW
       const secondary = i > 0
-      cmds.push({ t: 'path', d: edgePath(a, b), stroke: b.color, width: secondary ? Math.max(1, w * 0.6) : w, dash: secondary ? [w * 2, w * 2] : undefined, opacity: op })
+      const es = edgeStyles[`${pid}>${n.id}`]
+      const ew = (secondary ? Math.max(1, w * 0.6) : w) * (es?.widthScale ?? 1)
+      const dashed = es?.dashed ?? secondary
+      cmds.push({ t: 'path', d: edgePath(a, b), stroke: es?.color ?? b.color, width: ew, dash: dashed ? [ew * 2, ew * 2] : undefined, opacity: op })
       const ann = edgeAnn.get(`${pid}>${n.id}`)
-      if (ann?.label) {
-        cmds.push({ t: 'text', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - fs * 0.9, text: ann.label, size: fs * 0.85, italic: true, align: 'center', baseline: 'top', color: '#6b7280', opacity: op })
+      const label = es?.label ?? ann?.label
+      if (label) {
+        cmds.push({ t: 'text', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - fs * 0.9, text: label, size: fs * 0.85, italic: true, align: 'center', baseline: 'top', color: '#6b7280', opacity: op })
       }
     })
   }
@@ -331,45 +369,57 @@ export function layoutOntogeny(graph: Ontogeny, view: OntogenyView): OntogenyLay
     if (e.kind !== 'self') continue
     const p = placed.get(e.from)
     if (!p) continue
-    const lr = r * 1.4
+    const lr = r0 * 1.4
     const cx = p.x
-    const cy = p.y - r - lr
+    const cy = p.y - r0 - lr
     cmds.push({ t: 'path', d: `M ${f(cx - lr * 0.7)} ${f(cy + lr * 0.7)} A ${f(lr)} ${f(lr)} 0 1 1 ${f(cx + lr * 0.7)} ${f(cy + lr * 0.7)}`, stroke: p.color, width: Math.max(1, edgeW * 0.6), opacity: fade(e.from), arrowEnd: { x: cx + lr * 0.7, y: cy + lr * 0.7, fromX: cx + lr, fromY: cy } })
   }
 
   // --- nodes
   for (const p of placed.values()) {
     const op = p.faded ? view.fadeOpacity : 1
+    const ns = nodeStyles[p.id]
+    const r = view.nodeSize * (ns?.sizeScale ?? 1)
+    const lfs = fs * (ns?.labelScale ?? 1)
+    const lweight = ns?.labelBold ? ('bold' as const) : undefined
+    const lcolor = ns?.labelColor
+    const text = (c: Extract<Cmd, { t: 'text' }>): Cmd => (ns?.hideLabel ? { t: 'rect', x: 0, y: 0, w: 0, h: 0, fill: 'none', opacity: 0 } : { ...c, size: lfs, weight: lweight ?? c.weight, color: lcolor ?? c.color })
+    const glyph = (cx: number, cy: number, rr: number, fill: string, stroke: string | undefined, sw: number): Cmd => {
+      const shape = ns?.shape ?? 'circle'
+      if (shape === 'square') return { t: 'rect', x: cx - rr, y: cy - rr, w: rr * 2, h: rr * 2, fill, stroke, strokeWidth: sw, rx: rr * 0.2, opacity: op }
+      if (shape === 'diamond') return { t: 'path', d: `M ${f(cx)} ${f(cy - rr * 1.2)} L ${f(cx + rr * 1.2)} ${f(cy)} L ${f(cx)} ${f(cy + rr * 1.2)} L ${f(cx - rr * 1.2)} ${f(cy)} Z`, stroke: stroke ?? fill, width: sw, fill, opacity: op }
+      return { t: 'circle', cx, cy, r: rr, fill, stroke, strokeWidth: sw, opacity: op }
+    }
     const labelLines = view.showMarkers && p.markers ? `${p.label}\n${p.markers}` : p.label
     if (view.nodeStyle === 'icon' && p.iconId) {
       cmds.push({ t: 'icon', x: p.x - iconSize / 2, y: p.y - iconSize / 2, w: iconSize, h: iconSize, iconId: p.iconId, color: p.color, opacity: op })
-      if (horizontal && !p.isLeaf) cmds.push({ t: 'text', x: p.x, y: p.y - iconSize / 2 - fs * 1.3 * (labelLines.split('\n').length) - 2, text: labelLines, size: fs, align: 'center', baseline: 'top', opacity: op })
-      else if (horizontal) cmds.push({ t: 'text', x: p.x + iconSize / 2 + 6, y: p.y, text: labelLines, size: fs, align: 'left', baseline: 'middle', opacity: op })
-      else cmds.push({ t: 'text', x: p.x, y: p.y + iconSize / 2 + 4, text: labelLines, size: fs, align: 'center', baseline: 'top', opacity: op })
+      if (horizontal && !p.isLeaf) cmds.push(text({ t: 'text', x: p.x, y: p.y - iconSize / 2 - fs * 1.3 * (labelLines.split('\n').length) - 2, text: labelLines, size: fs, align: 'center', baseline: 'top', opacity: op }))
+      else if (horizontal) cmds.push(text({ t: 'text', x: p.x + iconSize / 2 + 6, y: p.y, text: labelLines, size: fs, align: 'left', baseline: 'middle', opacity: op }))
+      else cmds.push(text({ t: 'text', x: p.x, y: p.y + iconSize / 2 + 4, text: labelLines, size: fs, align: 'center', baseline: 'top', opacity: op }))
       continue
     }
     if (view.nodeStyle === 'pill') {
       const w = estimateTextWidth(p.label, fs) + fs * 1.4
       const h = fs * 1.8 + (view.showMarkers && p.markers ? fs * 1.2 : 0)
       cmds.push({ t: 'rect', x: p.x - w / 2, y: p.y - h / 2, w, h, fill: p.color, stroke: INK, strokeWidth: 1.2, rx: h / 2, opacity: op })
-      cmds.push({ t: 'text', x: p.x, y: p.y, text: labelLines, size: fs, align: 'center', baseline: 'middle', color: textOn(p.color), opacity: op })
+      cmds.push(text({ t: 'text', x: p.x, y: p.y, text: labelLines, size: fs, align: 'center', baseline: 'middle', color: textOn(p.color), opacity: op }))
       continue
     }
     if (view.nodeStyle === 'label') {
       // text only, with a small dot
-      cmds.push({ t: 'circle', cx: p.x, cy: p.y, r: Math.max(2, r * 0.45), fill: p.color, opacity: op })
+      cmds.push(glyph(p.x, p.y, Math.max(2, r * 0.45), p.color, undefined, 0))
     } else if (view.edgeStyle === 'metro') {
-      cmds.push({ t: 'circle', cx: p.x, cy: p.y, r: p.terminal ? r * 1.15 : r, fill: '#ffffff', stroke: p.color, strokeWidth: Math.max(2, edgeW * 0.45), opacity: op })
+      cmds.push(glyph(p.x, p.y, p.terminal ? r * 1.15 : r, '#ffffff', p.color, Math.max(2, edgeW * 0.45)))
     } else {
-      cmds.push({ t: 'circle', cx: p.x, cy: p.y, r: p.terminal ? r * 1.15 : r, fill: p.color, stroke: INK, strokeWidth: 1.2, opacity: op })
+      cmds.push(glyph(p.x, p.y, p.terminal ? r * 1.15 : r, p.color, INK, 1.2))
     }
     const labelOffset = r + 6
     if (horizontal) {
-      if (p.isLeaf) cmds.push({ t: 'text', x: p.x + labelOffset, y: p.y, text: labelLines, size: fs, align: 'left', baseline: 'middle', opacity: op })
-      else cmds.push({ t: 'text', x: p.x - r, y: p.y - r - 3 - fs * 1.3 * labelLines.split('\n').length + fs * 0.25, text: labelLines, size: fs, align: 'left', baseline: 'top', opacity: op })
+      if (p.isLeaf) cmds.push(text({ t: 'text', x: p.x + labelOffset, y: p.y, text: labelLines, size: fs, align: 'left', baseline: 'middle', opacity: op }))
+      else cmds.push(text({ t: 'text', x: p.x - r, y: p.y - r - 3 - lfs * 1.3 * labelLines.split('\n').length + lfs * 0.25, text: labelLines, size: fs, align: 'left', baseline: 'top', opacity: op }))
     } else {
-      if (p.isLeaf) cmds.push({ t: 'text', x: p.x, y: p.y + labelOffset, text: labelLines, size: fs, align: 'center', baseline: 'top', opacity: op })
-      else cmds.push({ t: 'text', x: p.x + labelOffset, y: p.y, text: labelLines, size: fs, align: 'left', baseline: 'middle', opacity: op })
+      if (p.isLeaf) cmds.push(text({ t: 'text', x: p.x, y: p.y + labelOffset, text: labelLines, size: fs, align: 'center', baseline: 'top', opacity: op }))
+      else cmds.push(text({ t: 'text', x: p.x + labelOffset, y: p.y, text: labelLines, size: fs, align: 'left', baseline: 'middle', opacity: op }))
     }
   }
 

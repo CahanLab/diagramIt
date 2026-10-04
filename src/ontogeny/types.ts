@@ -74,8 +74,17 @@ export interface OntogenyView {
   nodeStyle: 'circle' | 'pill' | 'label' | 'icon'
   /** Staged layout: space columns proportionally to stage `time` instead of evenly. */
   proportional?: boolean
-  /** Node ids hidden from the drawing (their descendants are hidden too unless re-parented). */
+  /** Node ids hidden together with their whole subtree. */
   hidden: string[]
+  /**
+   * Node ids hidden on their own: their progeny stay visible and are reconnected to
+   * the nearest visible ancestor (or become new roots when none is visible).
+   */
+  hiddenSelf?: string[]
+  /** Per-node appearance overrides. */
+  nodeStyles?: Record<string, NodeStyleOverride>
+  /** Per-edge appearance overrides keyed by "parentId>childId". */
+  edgeStyles?: Record<string, EdgeStyleOverride>
   /** Node ids whose subtrees are collapsed into the node. */
   collapsed: string[]
   /** Node ids whose root-paths are emphasised; everything else is faded when non-empty. */
@@ -106,6 +115,9 @@ export const DEFAULT_VIEW: OntogenyView = {
   edgeStyle: 'curve',
   nodeStyle: 'circle',
   hidden: [],
+  hiddenSelf: [],
+  nodeStyles: {},
+  edgeStyles: {},
   collapsed: [],
   emphasis: [],
   fadeOpacity: 0.18,
@@ -121,6 +133,26 @@ export const DEFAULT_VIEW: OntogenyView = {
   edgeWidth: 2.5,
   fontFamily: 'Helvetica',
   fontSize: 13,
+}
+
+export interface NodeStyleOverride {
+  color?: string
+  /** Multiplier on the view's node size (0.5–3). */
+  sizeScale?: number
+  shape?: 'circle' | 'square' | 'diamond'
+  labelBold?: boolean
+  labelColor?: string
+  /** Multiplier on the view's font size for this label. */
+  labelScale?: number
+  hideLabel?: boolean
+}
+
+export interface EdgeStyleOverride {
+  color?: string
+  /** Multiplier on the view's edge width. */
+  widthScale?: number
+  dashed?: boolean
+  label?: string
 }
 
 /** What is stored in `data.ontogeny` on the canvas group. */

@@ -1,5 +1,5 @@
 import { Group } from 'fabric'
-import { ChevronDown, ChevronRight, Eye, EyeOff, Focus, FoldVertical, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, CircleOff, Eye, EyeOff, Focus, FoldVertical, Plus, Trash2, ZoomIn, ZoomOut } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { placeFitted } from '../canvas/fit'
 import { useEditor } from '../canvas/editorStore'
@@ -9,7 +9,7 @@ import { ColorInput } from '../ui/ColorInput'
 import { ONTOGENIES } from './graphs'
 import { childrenMap, descendants, layoutOntogeny, rootOf, rootPath } from './layout'
 import { ontogenyOf, renderOntogeny, replaceOntogenyGroup } from './render'
-import { DEFAULT_VIEW, type Ontogeny, type OntogenyDocument, type OntogenyNode, type OntogenyView } from './types'
+import { DEFAULT_VIEW, type EdgeStyleOverride, type NodeStyleOverride, type Ontogeny, type OntogenyDocument, type OntogenyNode, type OntogenyView } from './types'
 
 const BLANK: Ontogeny = {
   id: 'custom', name: 'Custom ontogeny', organism: '',
@@ -35,13 +35,18 @@ function toggle(list: string[], id: string): string[] {
 export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: () => void }) {
   const canvas = useEditor((s) => s.canvas)
   const existing = target ? ontogenyOf(target) : undefined
-  const [doc, setDoc] = useState<OntogenyDocument>(() => structuredClone(existing ?? { graph: ONTOGENIES[1] ?? BLANK, view: { ...DEFAULT_VIEW, layout: 'tree' } }))
+  const [doc, setDoc] = useState<OntogenyDocument>(() => {
+    const d: OntogenyDocument = structuredClone(existing ?? { graph: ONTOGENIES[1] ?? BLANK, view: { ...DEFAULT_VIEW, layout: 'tree' as const } })
+    d.view = { ...DEFAULT_VIEW, ...d.view, hiddenSelf: d.view.hiddenSelf ?? [], nodeStyles: d.view.nodeStyles ?? {}, edgeStyles: d.view.edgeStyles ?? {} }
+    return d
+  })
   const [tab, setTab] = useState<'graph' | 'appearance'>('graph')
   const [showTemplates, setShowTemplates] = useState(!existing)
   const [selected, setSelected] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [busy, setBusy] = useState(false)
+  const [zoom, setZoom] = useState<number | 'fit'>('fit')
   const { graph, view } = doc
 
   useEffect(() => {
@@ -78,10 +83,37 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
     setExpanded((e) => ({ ...e, [parentId]: true }))
     setSelected(id)
   }
-  const removeNode = (id: string) => {
+  const removeSubtree = (id: string) => {
     const kill = new Set([id, ...descendants(graph.nodes, id)])
     setGraph((g) => ({ ...g, nodes: g.nodes.filter((n) => !kill.has(n.id)).map((n) => ({ ...n, parents: n.parents.filter((p) => !kill.has(p)) })) }))
     if (selected && kill.has(selected)) setSelected(null)
+  }
+  /** Remove one node; its children are re-attached to its primary parent. */
+  const removeNodeOnly = (id: string) => {
+    const node = byId.get(id)
+    if (!node) return
+    const parent = node.parents[0]
+    setGraph((g) => ({
+      ...g,
+      nodes: g.nodes.filter((n) => n.id !== id).map((n) => {
+        if (!n.parents.includes(id)) return n
+        const parents = n.parents.map((p) => (p === id ? parent : p)).filter((p): p is string => !!p && p !== n.id)
+        return { ...n, parents: Array.from(new Set(parents)) }
+      }),
+    }))
+    if (selected === id) setSelected(null)
+  }
+  const setNodeStyle = (id: string, patch: Partial<NodeStyleOverride>) => setView({ nodeStyles: { ...(view.nodeStyles ?? {}), [id]: { ...(view.nodeStyles?.[id] ?? {}), ...patch } } })
+  const setEdgeStyle = (key: string, patch: Partial<EdgeStyleOverride>) => setView({ edgeStyles: { ...(view.edgeStyles ?? {}), [key]: { ...(view.edgeStyles?.[key] ?? {}), ...patch } } })
+  const stageRange = (fromIdx: number, toIdx: number) => {
+    const ids = graph.stages.slice(Math.min(fromIdx, toIdx), Math.max(fromIdx, toIdx) + 1).map((s) => s.id)
+    setView({ stages: ids.length === graph.stages.length ? [] : ids })
+  }
+  const activeStageIdx = () => {
+    const all = graph.stages.map((s) => s.id)
+    const cur = view.stages.length ? view.stages : all
+    const idxs = cur.map((id) => all.indexOf(id)).filter((i) => i >= 0)
+    return { from: Math.min(...idxs), to: Math.max(...idxs) }
   }
   const focusOn = (id: string) => {
     // Show only the root path and the subtree of this node.
@@ -116,6 +148,7 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
     const kids = ch.get(n.id) ?? []
     const isOpen = query ? true : (expanded[n.id] ?? depth < 2)
     const hidden = view.hidden.includes(n.id)
+    const hiddenSelf = (view.hiddenSelf ?? []).includes(n.id)
     const collapsed = view.collapsed.includes(n.id)
     const emph = view.emphasis.includes(n.id)
     const visibleSelf = matches(n) || [...descendants(graph.nodes, n.id)].some((d) => matches(byId.get(d)!))
@@ -123,7 +156,7 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
     const color = graph.lineages.find((l) => l.id === n.lineage)?.color
     return (
       <div key={n.id}>
-        <div className={`onto-row${selected === n.id ? ' selected' : ''}${hidden ? ' hidden-node' : ''}`} style={{ paddingLeft: 6 + depth * 14 }} onClick={() => setSelected(n.id)}>
+        <div className={`onto-row${selected === n.id ? ' selected' : ''}${hidden || hiddenSelf ? ' hidden-node' : ''}`} style={{ paddingLeft: 6 + depth * 14 }} onClick={() => setSelected(n.id)}>
           <button className="icon-btn" onClick={(e) => { e.stopPropagation(); setExpanded((x) => ({ ...x, [n.id]: !isOpen })) }} style={{ visibility: kids.length ? 'visible' : 'hidden' }}>
             {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
           </button>
@@ -132,7 +165,9 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
           <span className="spacer" />
           <button className={`icon-btn${emph ? ' on' : ''}`} title="Emphasise path to this node" onClick={(e) => { e.stopPropagation(); setView({ emphasis: toggle(view.emphasis, n.id) }) }}><Focus size={13} /></button>
           <button className={`icon-btn${collapsed ? ' on' : ''}`} title="Collapse subtree" style={{ visibility: kids.length ? 'visible' : 'hidden' }} onClick={(e) => { e.stopPropagation(); setView({ collapsed: toggle(view.collapsed, n.id) }) }}><FoldVertical size={13} /></button>
-          <button className={`icon-btn${hidden ? ' on' : ''}`} title={hidden ? 'Show' : 'Hide (with descendants)'} onClick={(e) => { e.stopPropagation(); setView({ hidden: toggle(view.hidden, n.id) }) }}>{hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+          <button className={`icon-btn${hiddenSelf ? ' on' : ''}`} title={hiddenSelf ? 'Show this node' : 'Hide only this node (progeny stay, reconnected to the nearest visible ancestor)'} onClick={(e) => { e.stopPropagation(); setView({ hiddenSelf: toggle(view.hiddenSelf ?? [], n.id) }) }}><CircleOff size={13} /></button>
+          <button className={`icon-btn${hidden ? ' on' : ''}`} title={hidden ? 'Show subtree' : 'Hide this node and all its progeny'} onClick={(e) => { e.stopPropagation(); setView({ hidden: toggle(view.hidden, n.id) }) }}>{hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+          <button className="icon-btn" title="Add a child cell type" onClick={(e) => { e.stopPropagation(); addChild(n.id) }}><Plus size={13} /></button>
         </div>
         {isOpen && !collapsed && kids.map((k) => renderTree(k, depth + 1))}
       </div>
@@ -171,6 +206,17 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
                     <input placeholder="Find cell type…" value={query} onChange={(e) => setQuery(e.target.value)} style={{ flex: 1 }} />
                     <button className="btn" title="Clear visibility / emphasis" onClick={() => setView({ hidden: [], collapsed: [], emphasis: [], stages: [] })}>Reset view</button>
                   </div>
+                  <div className="row" style={{ gap: 6 }}>
+                    <label style={{ width: 'auto', color: 'var(--muted)' }}>Stages from</label>
+                    <select value={activeStageIdx().from} onChange={(e) => stageRange(Number(e.target.value), activeStageIdx().to)}>
+                      {graph.stages.map((s, i) => <option key={s.id} value={i}>{s.label}</option>)}
+                    </select>
+                    <label style={{ width: 'auto', color: 'var(--muted)' }}>to</label>
+                    <select value={activeStageIdx().to} onChange={(e) => stageRange(activeStageIdx().from, Number(e.target.value))}>
+                      {graph.stages.map((s, i) => <option key={s.id} value={i}>{s.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="hint">Row buttons: emphasise path · collapse subtree · hide node only (progeny re-attach to the nearest visible ancestor) · hide subtree · add child. Nodes above the stage range are dropped and their progeny become new roots.</div>
                   <div className="onto-tree">{root && renderTree(root, 0)}</div>
                   {sel && (
                     <div className="stage-card">
@@ -179,7 +225,8 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
                         <span className="spacer" />
                         <button className="btn" title="Show only this node's path and subtree" onClick={() => focusOn(sel.id)}><Focus size={14} /> Focus</button>
                         <button className="btn" onClick={() => addChild(sel.id)}><Plus size={14} /> Child</button>
-                        {sel.parents.length > 0 && <button className="btn danger" onClick={() => removeNode(sel.id)}><Trash2 size={14} /></button>}
+                        {sel.parents.length > 0 && <button className="btn danger" title="Delete this node; its children re-attach to its parent" onClick={() => removeNodeOnly(sel.id)}><Trash2 size={14} /> Node</button>}
+                        {sel.parents.length > 0 && <button className="btn danger" title="Delete this node and all its progeny" onClick={() => removeSubtree(sel.id)}><Trash2 size={14} /> Subtree</button>}
                       </header>
                       <div className="grid2">
                         <div className="field"><label>Label</label><input value={sel.label} onChange={(e) => updateNode(sel.id, { label: e.target.value })} /></div>
@@ -219,6 +266,45 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
                         </div>
                         <label className="check" style={{ alignSelf: 'end' }}><input type="checkbox" checked={!!sel.terminal} onChange={(e) => updateNode(sel.id, { terminal: e.target.checked })} /> Terminal cell type</label>
                       </div>
+                      <details open>
+                        <summary>Appearance of this node and its incoming edge</summary>
+                        {(() => {
+                          const ns = view.nodeStyles?.[sel.id] ?? {}
+                          const ekey = sel.parents[0] ? `${sel.parents[0]}>${sel.id}` : null
+                          const es = ekey ? view.edgeStyles?.[ekey] ?? {} : {}
+                          return (
+                            <>
+                              <div className="grid3">
+                                <div className="field"><label>Node colour</label><div className="row"><ColorInput value={ns.color ?? ''} allowNone onChange={(v) => setNodeStyle(sel.id, { color: v || undefined })} /></div></div>
+                                <div className="field"><label>Shape</label>
+                                  <select value={ns.shape ?? 'circle'} onChange={(e) => setNodeStyle(sel.id, { shape: e.target.value as NodeStyleOverride['shape'] })}>
+                                    <option value="circle">Circle</option><option value="square">Square</option><option value="diamond">Diamond</option>
+                                  </select>
+                                </div>
+                                <div className="field"><label>Node size ×{(ns.sizeScale ?? 1).toFixed(1)}</label><input type="range" min={0.5} max={3} step={0.1} value={ns.sizeScale ?? 1} onChange={(e) => setNodeStyle(sel.id, { sizeScale: Number(e.target.value) })} /></div>
+                              </div>
+                              <div className="grid3">
+                                <div className="field"><label>Label colour</label><div className="row"><ColorInput value={ns.labelColor ?? ''} allowNone onChange={(v) => setNodeStyle(sel.id, { labelColor: v || undefined })} /></div></div>
+                                <div className="field"><label>Label size ×{(ns.labelScale ?? 1).toFixed(1)}</label><input type="range" min={0.6} max={2} step={0.1} value={ns.labelScale ?? 1} onChange={(e) => setNodeStyle(sel.id, { labelScale: Number(e.target.value) })} /></div>
+                                <div className="radio-list" style={{ alignSelf: 'end' }}>
+                                  <label className="check"><input type="checkbox" checked={!!ns.labelBold} onChange={(e) => setNodeStyle(sel.id, { labelBold: e.target.checked })} /> Bold</label>
+                                  <label className="check"><input type="checkbox" checked={!!ns.hideLabel} onChange={(e) => setNodeStyle(sel.id, { hideLabel: e.target.checked })} /> Hide label</label>
+                                </div>
+                              </div>
+                              {ekey && (
+                                <div className="grid3">
+                                  <div className="field"><label>Edge colour (from parent)</label><div className="row"><ColorInput value={es.color ?? ''} allowNone onChange={(v) => setEdgeStyle(ekey, { color: v || undefined })} /></div></div>
+                                  <div className="field"><label>Edge width ×{(es.widthScale ?? 1).toFixed(1)}</label><input type="range" min={0.3} max={4} step={0.1} value={es.widthScale ?? 1} onChange={(e) => setEdgeStyle(ekey, { widthScale: Number(e.target.value) })} /></div>
+                                  <div className="field"><label>Edge label</label>
+                                    <div className="row"><input value={es.label ?? ''} placeholder="e.g. EMT" onChange={(e) => setEdgeStyle(ekey, { label: e.target.value || undefined })} /><label className="check"><input type="checkbox" checked={!!es.dashed} onChange={(e) => setEdgeStyle(ekey, { dashed: e.target.checked })} /> Dashed</label></div>
+                                  </div>
+                                </div>
+                              )}
+                              <div><button className="btn" onClick={() => { const nsAll = { ...(view.nodeStyles ?? {}) }; delete nsAll[sel.id]; const esAll = { ...(view.edgeStyles ?? {}) }; if (ekey) delete esAll[ekey]; setView({ nodeStyles: nsAll, edgeStyles: esAll }) }}>Reset this node's appearance</button></div>
+                            </>
+                          )
+                        })()}
+                      </details>
                     </div>
                   )}
                   <details>
@@ -321,8 +407,18 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
               )}
             </div>
             <div className="onto-preview">
-              <div className="preview-meta">{preview.n} nodes · {Math.round(preview.w)} × {Math.round(preview.h)} px{preview.error ? ` · ${preview.error}` : ''}</div>
-              <div className="preview-box" dangerouslySetInnerHTML={{ __html: preview.svg }} />
+              <div className="preview-meta">
+                <span>{preview.n} nodes · {Math.round(preview.w)} × {Math.round(preview.h)} px{preview.error ? ` · ${preview.error}` : ''}</span>
+                <span className="spacer" />
+                <button className="icon-btn" title="Zoom out" onClick={() => setZoom((z) => Math.max(0.1, (z === 'fit' ? 1 : z) / 1.25))}><ZoomOut size={14} /></button>
+                <span style={{ minWidth: 44, textAlign: 'center' }}>{zoom === 'fit' ? 'Auto' : `${Math.round(zoom * 100)}%`}</span>
+                <button className="icon-btn" title="Zoom in" onClick={() => setZoom((z) => Math.min(6, (z === 'fit' ? 1 : z) * 1.25))}><ZoomIn size={14} /></button>
+                <button className="btn" style={{ padding: '2px 8px' }} onClick={() => setZoom('fit')}>Fit</button>
+                <button className="btn" style={{ padding: '2px 8px' }} onClick={() => setZoom(1)}>100%</button>
+              </div>
+              <div className={`preview-box${zoom === 'fit' ? ' fit' : ''}`}>
+                <div style={zoom === 'fit' ? undefined : { width: preview.w * zoom, height: preview.h * zoom }} dangerouslySetInnerHTML={{ __html: zoom === 'fit' ? preview.svg : preview.svg.replace(/<svg([^>]*) width="[^"]*" height="[^"]*"/, `<svg$1 width="${preview.w * zoom}" height="${preview.h * zoom}"`) }} />
+              </div>
             </div>
           </div>
         </div>

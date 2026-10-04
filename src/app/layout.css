@@ -166,9 +166,12 @@ button { cursor: pointer; }
 .onto-list .icon-btn { border: none; background: transparent; color: var(--muted); padding: 2px 4px; border-radius: 4px; }
 .onto-appearance { display: flex; flex-direction: column; gap: 10px; }
 .onto-preview { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
-.onto-preview .preview-meta { padding: 6px 10px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border); }
+.onto-preview .preview-meta { padding: 4px 10px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+.onto-preview .preview-meta .spacer { flex: 1; }
+.onto-preview .preview-meta .icon-btn { border: none; background: transparent; color: var(--muted); padding: 2px; border-radius: 4px; display: inline-flex; }
+.onto-preview .preview-meta .icon-btn:hover { background: var(--bg); color: var(--ink); }
 .onto-preview .preview-box { flex: 1; overflow: auto; padding: 10px; }
-.onto-preview .preview-box svg { max-width: 100%; height: auto; }
+.onto-preview .preview-box.fit svg { max-width: 100%; height: auto; }
 .template-card.active { border-color: var(--accent); }
 details > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .stage-card header input { padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; }
