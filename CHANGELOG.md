@@ -30,6 +30,11 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Hosted web app on GitHub Pages (https://cahanlab.github.io/diagramIt/), deployed
+  by a GitHub Actions workflow on every push to `master`.
+
 ### Ideas / known gaps
 - Drosophila, zebrafish and Arabidopsis ontogenies.
 - Label-overlap avoidance in dense ontogeny trees.

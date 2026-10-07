@@ -7,7 +7,11 @@ tissues, species, molecular biology/omics, analyses) and a **differentiation
 timeline builder** for figures that show iPSCs being guided to a cell type by
 a series of media changes over time.
 
-## Run
+## Use it
+
+Hosted build (no install): https://cahanlab.github.io/diagramIt/
+
+## Run locally
 
 ```bash
 npm install
