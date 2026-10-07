@@ -30,17 +30,23 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
-### Added
-
-- Hosted web app on GitHub Pages (https://cahanlab.github.io/diagramIt/), deployed
-  by a GitHub Actions workflow on every push to `master`.
-
 ### Ideas / known gaps
 - Drosophila, zebrafish and Arabidopsis ontogenies.
 - Label-overlap avoidance in dense ontogeny trees.
 - Verify PowerPoint "Convert to Shape" on exported SVG/PPTX in PowerPoint.
 - Visual check of PDF export.
 - Arrowhead toggles on existing connectors; connector endpoints that attach to shapes.
+
+## [0.3.0] - 2026-10-07
+
+### Added
+
+- Hosted web app on GitHub Pages (https://cahanlab.github.io/diagramIt/), deployed
+  by a GitHub Actions workflow on every push to `master`.
+- Cahan Lab mark at the right of the top bar, linking to the lab website.
+- Help ▸ About DiagramIt: summary, version, copyright, links to the lab site,
+  source and issue tracker, a privacy note, and suggested acknowledgement text
+  with a Copy button.
 
 ## [0.2.0] - 2026-10-05
 

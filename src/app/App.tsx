@@ -20,6 +20,8 @@ import { ParametricDialog } from '../ui/ParametricDialog'
 import { PropertiesPanel } from '../ui/PropertiesPanel'
 import { Toolbar } from '../ui/Toolbar'
 import { DocName, Logo, Menu, MenuItem } from '../ui/TopBar'
+import { AboutDialog } from '../ui/AboutDialog'
+import { ABOUT } from './about'
 import { installShortcuts } from './shortcuts'
 import './layout.css'
 
@@ -194,11 +196,14 @@ export default function App() {
           <MenuItem label="Zoom out" shortcut="⌘−" onClick={() => { if (canvas) { zoomTo(canvas, canvas.getZoom() / 1.2); setZoom(canvas.getZoom()) } }} />
         </Menu>
         <Menu label="Help">
-          <MenuItem label="Keyboard shortcuts & tips" onClick={() => openDialog({ kind: 'about' })} />
+          <MenuItem label="Keyboard shortcuts & tips" onClick={() => openDialog({ kind: 'shortcuts' })} />
+          <div className="sep" />
+          <MenuItem label="About DiagramIt…" onClick={() => openDialog({ kind: 'about' })} />
         </Menu>
         <span className="spacer" />
         <DocName value={docName} onChange={setDocName} />
         <button className="btn primary" onClick={() => openDialog({ kind: 'export' })}>Export</button>
+        <a className="lab-mark" href={ABOUT.labUrl} target="_blank" rel="noopener noreferrer" title="Cahan Lab website" aria-label="Cahan Lab website"><img src={`${import.meta.env.BASE_URL}cahanlab.png`} alt="Cahan Lab" /></a>
         <input ref={fileRef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={(e) => { void onFileChosen(e.target.files?.[0]); e.target.value = '' }} />
       </div>
 
@@ -224,7 +229,8 @@ export default function App() {
       {dialog?.kind === 'export' && <ExportDialog docName={docName} onClose={close} notify={notify} />}
       {dialog?.kind === 'page' && <PageDialog onClose={close} />}
       {dialog?.kind === 'templates' && <ParametricDialog onClose={close} />}
-      {dialog?.kind === 'about' && <HelpDialog onClose={close} />}
+      {dialog?.kind === 'shortcuts' && <HelpDialog onClose={close} />}
+      {dialog?.kind === 'about' && <AboutDialog onClose={close} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   )

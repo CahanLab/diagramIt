@@ -175,3 +175,21 @@ button { cursor: pointer; }
 .template-card.active { border-color: var(--accent); }
 details > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .stage-card header input { padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; }
+
+/* Lab mark in the top bar */
+.topbar .lab-mark { display: inline-flex; align-items: center; margin-left: 6px; padding: 3px; border-radius: 6px; opacity: .8; }
+.topbar .lab-mark:hover { opacity: 1; background: var(--bg); }
+.topbar .lab-mark img { width: 24px; height: 24px; display: block; }
+
+/* About dialog */
+.about p { margin: 0; line-height: 1.5; }
+.about .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.about .hint a { color: inherit; }
+.about-head { display: flex; align-items: center; gap: 12px; }
+.about-title { font-weight: 700; font-size: 17px; }
+.about-version { font-weight: 500; color: var(--muted); font-size: 13px; margin-left: 4px; }
+.about-links { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.about-ack { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.about-ack-title { font-weight: 600; }
+.about-cite { display: flex; align-items: flex-start; gap: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+.about-cite code { flex: 1; font-size: 12px; line-height: 1.5; white-space: normal; user-select: all; }

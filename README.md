@@ -11,6 +11,12 @@ a series of media changes over time.
 
 Hosted build (no install): https://cahanlab.github.io/diagramIt/
 
+If a figure made with DiagramIt appears in a paper, poster, talk or web page,
+please acknowledge it (Help ▸ About has copyable wording):
+
+> Figure created with DiagramIt (Cahan Lab, Johns Hopkins University;
+> https://cahanlab.github.io/diagramIt/).
+
 ## Run locally
 
 ```bash
