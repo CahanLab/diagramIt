@@ -3,7 +3,7 @@ export const ABOUT = {
   summary:
     'DiagramIt is a free, browser-based editor for publication-quality schematics of experiments, protocols and developmental lineages, with exports that stay editable in PowerPoint.',
   author: 'Patrick Cahan',
-  lab: 'Cahan Lab, Johns Hopkins University',
+  lab: 'Cahan Lab',
   labUrl: 'https://cahanlab.org/',
   appUrl: 'https://cahanlab.github.io/diagramIt/',
   repoUrl: 'https://github.com/CahanLab/diagramIt',
@@ -15,5 +15,5 @@ export const ABOUT = {
 export const APP_VERSION: string = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'
 
 export function acknowledgement(version = APP_VERSION): string {
-  return `Figure created with DiagramIt v${version} (Cahan Lab, Johns Hopkins University; ${ABOUT.appUrl}).`
+  return `Figure created with DiagramIt v${version} (Cahan Lab; ${ABOUT.appUrl}).`
 }

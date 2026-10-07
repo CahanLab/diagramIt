@@ -14,7 +14,7 @@ Hosted build (no install): https://cahanlab.github.io/diagramIt/
 If a figure made with DiagramIt appears in a paper, poster, talk or web page,
 please acknowledge it (Help ▸ About has copyable wording):
 
-> Figure created with DiagramIt (Cahan Lab, Johns Hopkins University;
+> Figure created with DiagramIt (Cahan Lab;
 > https://cahanlab.github.io/diagramIt/).
 
 ## Run locally
