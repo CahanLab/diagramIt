@@ -30,6 +30,20 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-07
+
+### Added
+
+- GitHub mark in the top bar linking to the source repository.
+- `scripts/release.sh` tags the version and publishes a GitHub release with
+  notes from this file.
+
+### Changed
+
+- Source code relicensed from PolyForm Noncommercial 1.0.0 to MIT (`LICENSE`);
+  Help ▸ About and README updated to match.
+- Cahan Lab mark enlarged for legibility.
+
 ## [0.3.1] - 2026-10-07
 
 ### Added

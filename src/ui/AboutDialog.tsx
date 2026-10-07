@@ -44,7 +44,7 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
             <div className="about-ack-title">Terms of use and licence</div>
             <p className="hint">{ABOUT.termsOfUse}</p>
             <p className="hint">
-              {ABOUT.licenseSummary} Licence: <a href={ABOUT.licenseUrl} {...ext}>{ABOUT.licenseName}</a>. For commercial licensing of the code, contact {ABOUT.author} via the <a href={ABOUT.labUrl} {...ext}>lab website</a>.
+              {ABOUT.licenseSummary} <a href={ABOUT.licenseUrl} {...ext}>Read the licence</a>.
             </p>
           </div>
           <div className="about-ack">

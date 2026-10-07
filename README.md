@@ -23,11 +23,16 @@ please acknowledge it (Help ▸ About has copyable wording):
 app to make figures. Figures you make are yours to use however you like; an
 acknowledgement is appreciated but not required.
 
-**Source code.** Copyright 2026 Patrick Cahan. Licensed under the
-[PolyForm Noncommercial License 1.0.0](LICENSE.md): free to use, modify and
-share for noncommercial purposes (academic, nonprofit, government and
-personal). Commercial use of the code needs a separate license; contact
-Patrick Cahan via [cahanlab.org](https://cahanlab.org/).
+**Source code.** Copyright 2026 Patrick Cahan. Open source under the
+[MIT License](LICENSE): free to use, modify, share and build on for any
+purpose, provided the copyright notice is kept.
+
+## Releases
+
+Each release is a git tag (`vX.Y.Z`) with a GitHub release whose notes come
+from `CHANGELOG.md`; the hosted app always serves the latest `master`. To cut
+one: update `CHANGELOG.md` and `package.json`, commit, then run
+`scripts/release.sh`.
 
 ## Run locally
 

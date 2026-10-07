@@ -14,6 +14,6 @@ describe('about', () => {
   it('terms of use let anyone use the hosted app and own their figures', () => {
     expect(ABOUT.termsOfUse).toMatch(/commercial organisations, may use/)
     expect(ABOUT.termsOfUse).toMatch(/Figures you make are yours/)
-    expect(ABOUT.licenseName).toBe('PolyForm Noncommercial 1.0.0')
+    expect(ABOUT.licenseName).toBe('MIT')
   })
 })

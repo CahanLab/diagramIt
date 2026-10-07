@@ -21,6 +21,7 @@ import { PropertiesPanel } from '../ui/PropertiesPanel'
 import { Toolbar } from '../ui/Toolbar'
 import { DocName, Logo, Menu, MenuItem } from '../ui/TopBar'
 import { AboutDialog } from '../ui/AboutDialog'
+import { GitHubMark } from '../ui/GitHubMark'
 import { ABOUT } from './about'
 import { installShortcuts } from './shortcuts'
 import './layout.css'
@@ -204,6 +205,7 @@ export default function App() {
         <DocName value={docName} onChange={setDocName} />
         <button className="btn primary" onClick={() => openDialog({ kind: 'export' })}>Export</button>
         <a className="lab-mark" href={ABOUT.labUrl} target="_blank" rel="noopener noreferrer" title="Cahan Lab website" aria-label="Cahan Lab website"><img src={`${import.meta.env.BASE_URL}cahanlab.png`} alt="Cahan Lab" /></a>
+        <a className="lab-mark github-mark" href={ABOUT.repoUrl} target="_blank" rel="noopener noreferrer" title="Source code on GitHub" aria-label="Source code on GitHub"><GitHubMark /></a>
         <input ref={fileRef} type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={(e) => { void onFileChosen(e.target.files?.[0]); e.target.value = '' }} />
       </div>
 

@@ -20,6 +20,9 @@ Public repo `CahanLab/diagramIt`; every push to `master` runs
 deploy) and publishes https://cahanlab.github.io/diagramIt/ in about a minute.
 `vite.config.ts` reads `BASE_PATH` for the asset base; local builds use `/`.
 Check a deploy with `gh run list` and a browser visit to the live URL.
+Releases: after cutting a version in CHANGELOG.md and package.json and
+committing, run `scripts/release.sh` (tags `vX.Y.Z`, publishes a GitHub
+release with that CHANGELOG section as notes).
 
 ## Architecture map
 

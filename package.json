@@ -1,8 +1,8 @@
 {
   "name": "diagramit",
   "private": true,
-  "license": "PolyForm-Noncommercial-1.0.0",
-  "version": "0.3.1",
+  "license": "MIT",
+  "version": "0.3.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
