@@ -13,6 +13,14 @@ npm run build        # tsc -b && vite build  — must pass before committing
 npx tsx scripts/icon-sheet.ts <category> <outDir>   # contact sheet of icons (macOS qlmanage)
 ```
 
+## Deployment
+
+Public repo `CahanLab/diagramIt`; every push to `master` runs
+`.github/workflows/pages.yml` (test, build with `BASE_PATH=/diagramIt/`,
+deploy) and publishes https://cahanlab.github.io/diagramIt/ in about a minute.
+`vite.config.ts` reads `BASE_PATH` for the asset base; local builds use `/`.
+Check a deploy with `gh run list` and a browser visit to the live URL.
+
 ## Architecture map
 
 - `src/canvas/` — Fabric canvas wrapper (`FabricCanvas.tsx`), zustand store
