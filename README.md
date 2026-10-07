@@ -17,6 +17,18 @@ please acknowledge it (Help ▸ About has copyable wording):
 > Figure created with DiagramIt (Cahan Lab;
 > https://cahanlab.github.io/diagramIt/).
 
+## Terms of use and license
+
+**Hosted app.** Anyone, including commercial organizations, may use the hosted
+app to make figures. Figures you make are yours to use however you like; an
+acknowledgement is appreciated but not required.
+
+**Source code.** Copyright 2026 Patrick Cahan. Licensed under the
+[PolyForm Noncommercial License 1.0.0](LICENSE.md): free to use, modify and
+share for noncommercial purposes (academic, nonprofit, government and
+personal). Commercial use of the code needs a separate license; contact
+Patrick Cahan via [cahanlab.org](https://cahanlab.org/).
+
 ## Run locally
 
 ```bash

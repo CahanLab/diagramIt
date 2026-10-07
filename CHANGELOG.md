@@ -30,6 +30,17 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-07
+
+### Added
+
+- Source code licensed under PolyForm Noncommercial 1.0.0 (`LICENSE.md`); terms
+  of use for the hosted app and figure ownership stated in README and Help ▸ About.
+
+### Changed
+
+- Attribution and acknowledgement text read "Cahan Lab" only.
+
 ### Ideas / known gaps
 - Drosophila, zebrafish and Arabidopsis ontogenies.
 - Label-overlap avoidance in dense ontogeny trees.

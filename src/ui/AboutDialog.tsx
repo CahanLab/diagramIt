@@ -41,6 +41,13 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
             <a href={ABOUT.issuesUrl} {...ext}>Report a problem or request a feature</a>
           </div>
           <div className="about-ack">
+            <div className="about-ack-title">Terms of use and licence</div>
+            <p className="hint">{ABOUT.termsOfUse}</p>
+            <p className="hint">
+              {ABOUT.licenseSummary} Licence: <a href={ABOUT.licenseUrl} {...ext}>{ABOUT.licenseName}</a>. For commercial licensing of the code, contact {ABOUT.author} via the <a href={ABOUT.labUrl} {...ext}>lab website</a>.
+            </p>
+          </div>
+          <div className="about-ack">
             <div className="about-ack-title">Acknowledging DiagramIt</div>
             <p className="hint">
               If a figure made here appears in a paper, poster, talk or web page, a line in the legend, methods or acknowledgements is appreciated. Suggested wording:
