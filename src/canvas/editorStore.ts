@@ -1,7 +1,15 @@
 import type { Canvas, FabricObject } from 'fabric'
 import { create } from 'zustand'
 import { DEFAULT_PAGE } from './page'
+import type { Ontogeny } from '../ontogeny/types'
+import type { Protocol } from '../protocol/types'
 import type { PageSpec, ToolId } from './types'
+
+/** What File ▸ "Save selection as library item" and the editors' "Save as template" hand to the SaveEntryDialog. */
+export type SaveEntryRequest =
+  | { kind: 'icon'; svg: string; width: number; height: number }
+  | { kind: 'protocol'; protocol: Protocol }
+  | { kind: 'ontogeny'; graph: Ontogeny }
 
 export interface EditorState {
   canvas: Canvas | null
@@ -15,7 +23,17 @@ export interface EditorState {
   canRedo: boolean
   dirty: boolean
   /** Which modal dialog is open. */
-  dialog: null | { kind: 'protocol'; target?: FabricObject } | { kind: 'ontogeny'; target?: FabricObject } | { kind: 'export' } | { kind: 'page' } | { kind: 'templates' } | { kind: 'about' } | { kind: 'shortcuts' }
+  dialog:
+    | null
+    | { kind: 'protocol'; target?: FabricObject; template?: { protocol: Protocol; libraryId: string } }
+    | { kind: 'ontogeny'; target?: FabricObject; template?: { graph: Ontogeny; libraryId: string } }
+    | { kind: 'export' }
+    | { kind: 'page' }
+    | { kind: 'templates' }
+    | { kind: 'about' }
+    | { kind: 'shortcuts' }
+    | { kind: 'libraries' }
+    | { kind: 'saveEntry'; request: SaveEntryRequest }
   setCanvas: (c: Canvas | null) => void
   setTool: (t: ToolId) => void
   setPage: (p: PageSpec) => void

@@ -9,6 +9,8 @@ import { IconPreview } from '../ui/IconPreview'
 import { findItem } from '../library/registry'
 import { renderProtocol, replaceProtocolGroup, protocolOf } from './render'
 import { PROTOCOL_TEMPLATES } from './templates'
+import { customProtocolsOf, useLibraries } from '../libraries/store'
+import { SaveEntryDialog } from '../ui/SaveEntryDialog'
 import type { MediaRow, Protocol, Stage } from './types'
 import { newId } from './types'
 
@@ -93,10 +95,14 @@ function RowEditor({ row, onChange, onRemove }: { row: MediaRow; onChange: (r: M
   )
 }
 
-export function ProtocolEditor({ target, onClose }: { target?: Group; onClose: () => void }) {
+export function ProtocolEditor({ target, onClose, template, notify }: { target?: Group; onClose: () => void; template?: { protocol: Protocol; libraryId: string }; notify?: (m: string) => void }) {
+  const libraries = useLibraries((s) => s.libraries)
+  const customTemplates = useMemo(() => customProtocolsOf(libraries), [libraries])
+  const [libraryId, setLibraryId] = useState<string | undefined>(template?.libraryId)
+  const [saveReq, setSaveReq] = useState(false)
   const canvas = useEditor((s) => s.canvas)
   const existing = target ? protocolOf(target) : undefined
-  const [p, setP] = useState<Protocol>(() => structuredClone(existing ?? PROTOCOL_TEMPLATES[0]!.protocol))
+  const [p, setP] = useState<Protocol>(() => structuredClone(existing ?? template?.protocol ?? PROTOCOL_TEMPLATES[0]!.protocol))
   const [busy, setBusy] = useState(false)
   const [showTemplates, setShowTemplates] = useState(!existing)
 
@@ -129,7 +135,7 @@ export function ProtocolEditor({ target, onClose }: { target?: Group; onClose: (
       if (target && existing) {
         await replaceProtocolGroup(canvas, target, p)
       } else {
-        const g = await renderProtocol(p)
+        const g = await renderProtocol(p, libraryId)
         placeFitted(canvas, g, useEditor.getState().page)
         canvas.add(g)
         canvas.setActiveObject(g)
@@ -154,8 +160,13 @@ export function ProtocolEditor({ target, onClose }: { target?: Group; onClose: (
               <div className="field"><label>Start from a template</label></div>
               <div className="template-list">
                 {PROTOCOL_TEMPLATES.map((t) => (
-                  <button key={t.id} className="template-card" onClick={() => { setP(structuredClone(t.protocol)); setShowTemplates(false) }}>
+                  <button key={t.id} className="template-card" onClick={() => { setP(structuredClone(t.protocol)); setLibraryId(undefined); setShowTemplates(false) }}>
                     <b>{t.name}</b><span>{t.description}</span>
+                  </button>
+                ))}
+                {customTemplates.map((t) => (
+                  <button key={t.id} className="template-card" onClick={() => { setP(structuredClone(t.protocol)); setLibraryId(t.id); setShowTemplates(false) }}>
+                    <b>{t.name}</b><span>{t.description ? `${t.description} · ` : ''}{t.libraryName} library</span>
                   </button>
                 ))}
               </div>
@@ -223,10 +234,12 @@ export function ProtocolEditor({ target, onClose }: { target?: Group; onClose: (
           <div><button className="btn" onClick={() => update({ rows: [...p.rows, { id: newId('r'), label: 'Basal medium', spans: [{ start: 0, end: 4, text: 'RPMI + B27', color: '#f6d9cf' }] }] })}><Plus size={14} /> Add row</button></div>
         </div>
         <footer>
+          <button className="btn" style={{ marginRight: 'auto' }} onClick={() => setSaveReq(true)}>Save as template…</button>
           <button className="btn" onClick={onClose}>Cancel</button>
           <button className="btn primary" disabled={busy} onClick={() => void apply()}>{existing ? 'Apply changes' : 'Insert'}</button>
         </footer>
       </div>
+      {saveReq && <SaveEntryDialog request={{ kind: 'protocol', protocol: p }} onClose={() => setSaveReq(false)} notify={notify ?? (() => {})} />}
     </div>
   )
 }

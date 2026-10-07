@@ -4,14 +4,14 @@ import { renderLayout } from '../draw/render'
 import { layoutOntogeny } from './layout'
 import type { OntogenyDocument } from './types'
 
-export async function renderOntogeny(doc: OntogenyDocument): Promise<Group> {
-  const data: ObjectData = { kind: 'ontogeny', ontogeny: doc }
+export async function renderOntogeny(doc: OntogenyDocument, libraryId?: string): Promise<Group> {
+  const data: ObjectData = { kind: 'ontogeny', ontogeny: doc, ...(libraryId ? { libraryId } : {}) }
   return renderLayout(layoutOntogeny(doc.graph, doc.view), doc.view.fontFamily, data)
 }
 
 /** Re-render an ontogeny in place, keeping position/scale/rotation and z-order. */
 export async function replaceOntogenyGroup(canvas: Canvas, old: Group, doc: OntogenyDocument): Promise<Group> {
-  const fresh = await renderOntogeny(doc)
+  const fresh = await renderOntogeny(doc, (old.get('data') as ObjectData | undefined)?.libraryId)
   fresh.set({ left: old.left, top: old.top, scaleX: old.scaleX, scaleY: old.scaleY, angle: old.angle })
   const index = canvas.getObjects().indexOf(old)
   canvas.remove(old)

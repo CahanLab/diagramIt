@@ -1,9 +1,10 @@
 import { ActiveSelection, FabricObject, Group, IText, Textbox } from 'fabric'
-import { FlipHorizontal2, FlipVertical2, Lock, Unlock } from 'lucide-react'
+import { FlipHorizontal2, FlipVertical2, LibraryBig, Lock, Unlock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { dataOf, flipSelection, setLocked } from '../canvas/commands'
 import { useEditor } from '../canvas/editorStore'
 import { iconDataOf, recolorIcon } from '../library/insert'
+import { selectionToSvg } from '../libraries/capture'
 import { findItem } from '../library/registry'
 import { ontogenyOf } from '../ontogeny/render'
 import { protocolOf } from '../protocol/render'
@@ -97,7 +98,7 @@ export function PropertiesPanel() {
         </div>
       )}
 
-      {iconData && (
+      {iconData && (single instanceof Group ? single.getObjects().some((o) => dataOf(o)?.role) : true) && (
         <>
           <div className="row"><label>Colour</label><ColorInput value={iconData.primaryColor ?? ''} onChange={(v) => apply((o) => recolorIcon(o, v, undefined))} /></div>
           {findItem(iconData.libraryId ?? '')?.svg.match(/#secondary/i) && (
@@ -193,6 +194,9 @@ export function PropertiesPanel() {
         <button className="btn" title="Flip horizontal" onClick={() => flipSelection(canvas, 'x')}><FlipHorizontal2 /></button>
         <button className="btn" title="Flip vertical" onClick={() => flipSelection(canvas, 'y')}><FlipVertical2 /></button>
         <button className="btn" title={locked ? 'Unlock' : 'Lock position and size'} onClick={() => { setLocked(canvas, !locked); useEditor.getState().bumpSelection() }}>{locked ? <Unlock /> : <Lock />} {locked ? 'Unlock' : 'Lock'}</button>
+      </div>
+      <div className="btn-row">
+        <button className="btn" title="Save the selection as an icon in a custom library" onClick={() => { const s = selectionToSvg(canvas); if (!s) return; if (s.errors.length) { window.alert(`Cannot save: ${s.errors[0]}`); return } openDialog({ kind: 'saveEntry', request: { kind: 'icon', svg: s.svg, width: s.width, height: s.height } }) }}><LibraryBig /> Save as library item…</button>
       </div>
     </div>
   )

@@ -30,6 +30,23 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-07
+
+### Added
+
+- Custom libraries: save any selection as an icon, save timelines and
+  ontogenies as templates, import SVG files, and bundle them under your name
+  (File ▸ Libraries…). Export a library as `<id>.diagramit-lib.json`, load one
+  from a file, or share a link `?lib=<url>` that loads it on open. Library
+  authors are credited in the panel, in Help ▸ About and in the suggested
+  acknowledgement sentence. Example library at
+  `public/libraries/example.diagramit-lib.json`.
+
+### Changed
+
+- Properties panel hides the icon colour control for icons without
+  recolourable regions.
+
 ## [0.3.2] - 2026-10-07
 
 ### Added

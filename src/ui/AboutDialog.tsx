@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ABOUT, APP_VERSION, acknowledgement } from '../app/about'
+import { useEditor } from '../canvas/editorStore'
+import { useLibraries } from '../libraries/store'
+import { collectLibraryIds } from '../libraries/used'
 
 export function AboutDialog({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false)
@@ -8,7 +11,10 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-  const text = acknowledgement()
+  const canvas = useEditor((s) => s.canvas)
+  const libraries = useLibraries((s) => s.libraries)
+  const used = canvas ? librariesUsedIn(canvas.getObjects(), libraries) : []
+  const text = acknowledgement(APP_VERSION, used.map((l) => l.manifest))
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text)
@@ -40,6 +46,14 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
             <a href={ABOUT.repoUrl} {...ext}>Source code on GitHub</a>
             <a href={ABOUT.issuesUrl} {...ext}>Report a problem or request a feature</a>
           </div>
+          {libraries.length > 0 && (
+            <div className="about-ack">
+              <div className="about-ack-title">Loaded libraries</div>
+              {libraries.map((l) => (
+                <div className="hint" key={l.manifest.id}><b>{l.manifest.name}</b> by {l.manifest.author}{l.manifest.affiliation ? `, ${l.manifest.affiliation}` : ''}{used.includes(l) ? ' · used in this figure' : ''}</div>
+              ))}
+            </div>
+          )}
           <div className="about-ack">
             <div className="about-ack-title">Terms of use and licence</div>
             <p className="hint">{ABOUT.termsOfUse}</p>
@@ -62,4 +76,15 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   )
+}
+
+import type { CustomLibrary } from '../libraries/types'
+
+function librariesUsedIn(objs: Iterable<unknown>, libraries: CustomLibrary[]): CustomLibrary[] {
+  const prefixes = new Set<string>()
+  for (const id of collectLibraryIds(objs)) {
+    const dot = id.lastIndexOf('.')
+    if (dot > 0) prefixes.add(id.slice(0, dot))
+  }
+  return libraries.filter((l) => prefixes.has(l.manifest.id))
 }

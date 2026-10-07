@@ -16,9 +16,11 @@ export type Category =
   | 'molbio'
   | 'analyses'
   | 'composites'
+  /** Items from user-made libraries (see src/libraries). Not shown as a built-in section. */
+  | 'custom'
 
 export interface LibraryItem {
-  /** Unique, kebab-case, prefixed with category (e.g. `cells.ipsc-colony`). */
+  /** Unique, kebab-case, prefixed with category (e.g. `cells.ipsc-colony`) or, for custom items, with the library id. */
   id: string
   /** Display name. */
   name: string
@@ -37,6 +39,7 @@ export interface LibraryItem {
 }
 
 export const CATEGORY_LABELS: Record<Category, string> = {
+  custom: 'Custom',
   consumables: 'Consumables',
   tools: 'Tools',
   instruments: 'Instruments',

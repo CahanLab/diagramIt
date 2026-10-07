@@ -7,6 +7,8 @@ import { layoutToSvg } from '../draw/svg'
 import { itemsInCategory } from '../library/registry'
 import { ColorInput } from '../ui/ColorInput'
 import { ONTOGENIES } from './graphs'
+import { customOntogeniesOf, useLibraries } from '../libraries/store'
+import { SaveEntryDialog } from '../ui/SaveEntryDialog'
 import { childrenMap, descendants, layoutOntogeny, rootOf, rootPath } from './layout'
 import { ontogenyOf, renderOntogeny, replaceOntogenyGroup } from './render'
 import { DEFAULT_VIEW, type EdgeStyleOverride, type NodeStyleOverride, type Ontogeny, type OntogenyDocument, type OntogenyNode, type OntogenyView } from './types'
@@ -32,11 +34,15 @@ function toggle(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id]
 }
 
-export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: () => void }) {
+export function OntogenyEditor({ target, onClose, template, notify }: { target?: Group; onClose: () => void; template?: { graph: Ontogeny; libraryId: string }; notify?: (m: string) => void }) {
+  const libraries = useLibraries((s) => s.libraries)
+  const customGraphs = useMemo(() => customOntogeniesOf(libraries), [libraries])
+  const [libraryId, setLibraryId] = useState<string | undefined>(template?.libraryId)
+  const [saveReq, setSaveReq] = useState(false)
   const canvas = useEditor((s) => s.canvas)
   const existing = target ? ontogenyOf(target) : undefined
   const [doc, setDoc] = useState<OntogenyDocument>(() => {
-    const d: OntogenyDocument = structuredClone(existing ?? { graph: ONTOGENIES[1] ?? BLANK, view: { ...DEFAULT_VIEW, layout: 'tree' as const } })
+    const d: OntogenyDocument = structuredClone(existing ?? { graph: template?.graph ?? ONTOGENIES[1] ?? BLANK, view: { ...DEFAULT_VIEW, layout: 'tree' as const } })
     d.view = { ...DEFAULT_VIEW, ...d.view, hiddenSelf: d.view.hiddenSelf ?? [], nodeStyles: d.view.nodeStyles ?? {}, edgeStyles: d.view.edgeStyles ?? {} }
     return d
   })
@@ -130,7 +136,7 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
     try {
       if (target && existing) await replaceOntogenyGroup(canvas, target, doc)
       else {
-        const g = await renderOntogeny(doc)
+        const g = await renderOntogeny(doc, libraryId)
         placeFitted(canvas, g, useEditor.getState().page)
         canvas.add(g)
         canvas.setActiveObject(g)
@@ -186,9 +192,9 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
         <div className="body onto-body">
           {showTemplates && (
             <div className="template-list" style={{ marginBottom: 4 }}>
-              {[...ONTOGENIES, BLANK].map((g) => (
-                <button key={g.id} className={`template-card${graph.id === g.id ? ' active' : ''}`} onClick={() => { setDoc((d) => ({ graph: structuredClone(g), view: { ...d.view, hidden: [], collapsed: [], emphasis: [], stages: [] } })); setSelected(null); setShowTemplates(false) }}>
-                  <b>{g.name}</b><span>{g.organism || 'Editable starter'} · {g.nodes.length} nodes · {g.stages.length} stages</span>
+              {[...ONTOGENIES.map((g) => ({ g, lib: undefined as string | undefined })), ...customGraphs.map((c) => ({ g: c.graph, lib: c.libraryName })), { g: BLANK, lib: undefined }].map(({ g, lib }) => (
+                <button key={g.id} className={`template-card${graph.id === g.id ? ' active' : ''}`} onClick={() => { setDoc((d) => ({ graph: structuredClone(g), view: { ...d.view, hidden: [], collapsed: [], emphasis: [], stages: [] } })); setLibraryId(lib ? g.id : undefined); setSelected(null); setShowTemplates(false) }}>
+                  <b>{g.name}</b><span>{g.organism || 'Editable starter'} · {g.nodes.length} nodes · {g.stages.length} stages{lib ? ` · ${lib} library` : ''}</span>
                 </button>
               ))}
             </div>
@@ -423,10 +429,12 @@ export function OntogenyEditor({ target, onClose }: { target?: Group; onClose: (
           </div>
         </div>
         <footer>
+          <button className="btn" style={{ marginRight: 'auto' }} onClick={() => setSaveReq(true)}>Save as template…</button>
           <button className="btn" onClick={onClose}>Cancel</button>
           <button className="btn primary" disabled={busy} onClick={() => void apply()}>{existing ? 'Apply changes' : 'Insert'}</button>
         </footer>
       </div>
+      {saveReq && <SaveEntryDialog request={{ kind: 'ontogeny', graph }} onClose={() => setSaveReq(false)} notify={notify ?? (() => {})} />}
     </div>
   )
 }

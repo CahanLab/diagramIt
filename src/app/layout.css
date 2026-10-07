@@ -194,3 +194,21 @@ details > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .about-ack-title { font-weight: 600; }
 .about-cite { display: flex; align-items: flex-start; gap: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
 .about-cite code { flex: 1; font-size: 12px; line-height: 1.5; white-space: normal; user-select: all; }
+
+/* Custom libraries */
+.lib-cat > header .by { color: var(--muted); font-weight: 400; font-size: 11px; margin-left: 4px; }
+.lib-cat > header .icon-btn { border: none; background: transparent; color: var(--muted); padding: 2px; border-radius: 4px; display: inline-flex; }
+.lib-cat > header .icon-btn:hover { color: var(--ink); background: var(--panel); }
+.lib-templates { display: grid; gap: 4px; padding: 0 8px 8px; }
+.lib-templates button { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); text-align: left; font-size: 12px; }
+.lib-templates button:hover { background: var(--accent-soft); border-color: var(--accent); }
+.lib-templates button span { color: var(--muted); font-size: 11px; }
+.lib-cta { padding: 8px 10px 12px; color: var(--muted); font-size: 12px; line-height: 1.5; display: flex; flex-direction: column; gap: 6px; }
+.lib-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.lib-card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.lib-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; margin: 2px 4px 2px 0; font-size: 11px; }
+.lib-chip button { border: none; background: transparent; color: var(--muted); padding: 0 2px; font-size: 13px; }
+.save-preview { display: flex; justify-content: center; align-items: center; min-height: 64px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; }
+.save-preview .preview { width: 120px; height: 100px; display: flex; align-items: center; justify-content: center; }
+.save-preview .preview svg { max-width: 100%; max-height: 100%; }
+.modal .hint { color: var(--muted); font-size: 12px; line-height: 1.5; }

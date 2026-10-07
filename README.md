@@ -27,6 +27,29 @@ acknowledgement is appreciated but not required.
 [MIT License](LICENSE): free to use, modify, share and build on for any
 purpose, provided the copyright notice is kept.
 
+## Custom libraries
+
+Make your own icons, timeline templates and ontologies, bundle them under
+your name, and share them.
+
+- **Make items.** Select anything on the canvas and choose File ▸ *Save
+  selection as library item*; in a timeline or ontogeny editor click *Save as
+  template*; or import an SVG file from File ▸ *Libraries…*. The first save
+  creates a library with your name as author.
+- **Share.** File ▸ *Libraries…* ▸ *Export file* writes
+  `<id>.diagramit-lib.json`. Send the file, or host it on any public web page
+  (a GitHub repo works: use the raw file URL) and share a link that loads it:
+  `https://cahanlab.github.io/diagramIt/?lib=<file URL>`. Libraries loaded from
+  a URL are refreshed on every visit and are read-only; *Duplicate* makes an
+  editable copy.
+- **Credit.** The author is shown in the library panel, in Help ▸ About, and
+  the suggested acknowledgement sentence names every library a figure uses.
+
+Try it: [load the example library](https://cahanlab.github.io/diagramIt/?lib=https://cahanlab.github.io/diagramIt/libraries/example.diagramit-lib.json)
+(`public/libraries/example.diagramit-lib.json` shows the file format).
+Project files embed everything they use, so figures open correctly for people
+who do not have the library.
+
 ## Releases
 
 Each release is a git tag (`vX.Y.Z`) with a GitHub release whose notes come

@@ -40,6 +40,10 @@ release with that CHANGELOG section as notes).
   Fabric insertion with recolouring (`insert.ts`), parametric generators,
   icon data in `items/<category>.ts`.
 - `src/export/` — SVG, PNG, PDF (jsPDF + svg2pdf), PPTX (pptxgenjs), project JSON.
+- `src/libraries/` — user-made libraries (`*.diagramit-lib.json`): `types.ts`,
+  pure `normalize.ts`/`svg.ts`/`io.ts`, zustand `store.ts` (localStorage,
+  registers custom icons with the registry), Fabric-only `capture.ts`.
+  Spec: `docs/superpowers/specs/2026-10-07-custom-libraries-design.md`.
 - `src/ui/` — panels, toolbar, dialogs. `src/app/App.tsx` wires everything.
 - `src/templates/` — starter documents loaded by File ▸ New.
 

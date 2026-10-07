@@ -23,22 +23,28 @@ const ALL: LibraryItem[] = [
 
 const BY_ID = new Map(ALL.map((i) => [i.id, i]))
 
+/** Items from user-made libraries, supplied by src/libraries/store.ts so this module stays free of that dependency. */
+let external: () => LibraryItem[] = () => []
+export function registerExternalItems(getter: () => LibraryItem[]): void {
+  external = getter
+}
+
 export function allItems(): LibraryItem[] {
   return ALL
 }
 
 export function findItem(id: string): LibraryItem | undefined {
-  return BY_ID.get(id)
+  return BY_ID.get(id) ?? external().find((i) => i.id === id)
 }
 
 export function itemsInCategory(category: Category): LibraryItem[] {
-  return ALL.filter((i) => i.category === category)
+  return category === 'custom' ? external() : ALL.filter((i) => i.category === category)
 }
 
 /** Case-insensitive search over name, id and keywords. Empty query returns everything (optionally filtered by category). */
 export function searchItems(query: string, category?: Category): LibraryItem[] {
   const q = query.trim().toLowerCase()
-  const pool = category ? itemsInCategory(category) : ALL
+  const pool = category ? itemsInCategory(category) : [...ALL, ...external()]
   if (!q) return pool
   const terms = q.split(/\s+/)
   return pool.filter((item) => {

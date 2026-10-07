@@ -21,6 +21,18 @@ export const ABOUT = {
 /** Version injected by Vite from package.json (see vite.config.ts). */
 export const APP_VERSION: string = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'
 
-export function acknowledgement(version = APP_VERSION): string {
-  return `Figure created with DiagramIt v${version} (Cahan Lab; ${ABOUT.appUrl}).`
+export interface LibraryCredit {
+  name: string
+  author: string
+  /** Verbatim clause supplied by the library author; replaces the generated one. */
+  acknowledgement?: string
+}
+
+/** Suggested acknowledgement sentence, crediting any custom libraries the figure uses. */
+export function acknowledgement(version = APP_VERSION, libraries: LibraryCredit[] = []): string {
+  const base = `Figure created with DiagramIt v${version} (Cahan Lab; ${ABOUT.appUrl})`
+  if (!libraries.length) return `${base}.`
+  const clauses = libraries.map((l) => l.acknowledgement?.trim() || `the ${l.name}${/librar(y|ies)$/i.test(l.name.trim()) ? '' : ' library'} by ${l.author}`)
+  const list = clauses.length === 1 ? clauses[0]! : `${clauses.slice(0, -1).join(', ')} and ${clauses[clauses.length - 1]}`
+  return `${base}, using ${list}.`
 }

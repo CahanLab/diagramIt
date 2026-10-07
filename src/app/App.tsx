@@ -22,6 +22,11 @@ import { Toolbar } from '../ui/Toolbar'
 import { DocName, Logo, Menu, MenuItem } from '../ui/TopBar'
 import { AboutDialog } from '../ui/AboutDialog'
 import { GitHubMark } from '../ui/GitHubMark'
+import { LibrariesDialog } from '../ui/LibrariesDialog'
+import { SaveEntryDialog } from '../ui/SaveEntryDialog'
+import { selectionToSvg } from '../libraries/capture'
+import { loadLibrariesFromQuery } from '../libraries/io'
+import { librariesStore } from '../libraries/store'
 import { ABOUT } from './about'
 import { installShortcuts } from './shortcuts'
 import './layout.css'
@@ -163,6 +168,26 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [])
 
+  // Libraries shared as ?lib=<url> load once per page load (read-only, refreshed each time).
+  useEffect(() => {
+    void loadLibrariesFromQuery(window.location.search).then((results) => {
+      for (const r of results) {
+        if (r.ok) {
+          librariesStore.getState().upsertLibrary(r.library)
+          notify(`Loaded ${r.library.manifest.name} (${r.library.entries.length} items) by ${r.library.manifest.author}`)
+        } else notify(`Could not load library from ${r.url}: ${r.error}`)
+      }
+    })
+  }, [notify])
+
+  const saveSelectionAsItem = () => {
+    if (!canvas) return
+    const s = selectionToSvg(canvas)
+    if (!s) return notify('Select something on the canvas first')
+    if (s.errors.length) return notify(`Cannot save selection: ${s.errors[0]}`)
+    openDialog({ kind: 'saveEntry', request: { kind: 'icon', svg: s.svg, width: s.width, height: s.height } })
+  }
+
   const close = () => openDialog(null)
 
   return (
@@ -179,6 +204,9 @@ export default function App() {
           <MenuItem label="Export (PPTX / SVG / PDF / PNG)…" shortcut="⌘E" onClick={() => openDialog({ kind: 'export' })} />
           <div className="sep" />
           <MenuItem label="Page setup…" onClick={() => openDialog({ kind: 'page' })} />
+          <div className="sep" />
+          <MenuItem label="Save selection as library item…" disabled={selection.length === 0} onClick={saveSelectionAsItem} />
+          <MenuItem label="Libraries…" onClick={() => openDialog({ kind: 'libraries' })} />
         </Menu>
         <Menu label="Insert">
           <MenuItem label="Differentiation timeline…" onClick={() => openDialog({ kind: 'protocol' })} />
@@ -226,13 +254,15 @@ export default function App() {
         <button onClick={() => { if (canvas) { setZoom(fitPage(canvas, page)); canvas.requestRenderAll() } }}>Fit</button>
       </div>
 
-      {dialog?.kind === 'protocol' && <ProtocolEditor target={dialog.target instanceof Group ? dialog.target : undefined} onClose={() => { close(); recordHistory() }} />}
-      {dialog?.kind === 'ontogeny' && <OntogenyEditor target={dialog.target instanceof Group ? dialog.target : undefined} onClose={() => { close(); recordHistory() }} />}
+      {dialog?.kind === 'protocol' && <ProtocolEditor target={dialog.target instanceof Group ? dialog.target : undefined} template={dialog.template} notify={notify} onClose={() => { close(); recordHistory() }} />}
+      {dialog?.kind === 'ontogeny' && <OntogenyEditor target={dialog.target instanceof Group ? dialog.target : undefined} template={dialog.template} notify={notify} onClose={() => { close(); recordHistory() }} />}
       {dialog?.kind === 'export' && <ExportDialog docName={docName} onClose={close} notify={notify} />}
       {dialog?.kind === 'page' && <PageDialog onClose={close} />}
       {dialog?.kind === 'templates' && <ParametricDialog onClose={close} />}
       {dialog?.kind === 'shortcuts' && <HelpDialog onClose={close} />}
       {dialog?.kind === 'about' && <AboutDialog onClose={close} />}
+      {dialog?.kind === 'libraries' && <LibrariesDialog onClose={close} notify={notify} />}
+      {dialog?.kind === 'saveEntry' && <SaveEntryDialog request={dialog.request} onClose={close} notify={notify} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   )

@@ -3,7 +3,7 @@ export type ObjectKind = 'shape' | 'text' | 'icon' | 'protocol' | 'ontogeny' | '
 /** Custom data attached to every canvas object (serialised via toObject(['data'])). */
 export interface ObjectData {
   kind: ObjectKind
-  /** Library item id for icons. */
+  /** Library item id for icons; for timelines/ontogenies, the custom template entry they were started from. */
   libraryId?: string
   primaryColor?: string
   secondaryColor?: string
