@@ -23,13 +23,13 @@ function common(list: LimbStage[], allowed: ReadonlySet<ElementName>) {
     list.filter((s) => s.stage < 'E15.5').forEach((s) => expect(s.elements.some((e) => e.state === 'ossifying')).toBe(false)))
   it('every capsule endpoint lies inside the viewBox', () =>
     list.forEach((s) => {
-      const [, , w, h] = s.viewBox.split(' ').map(Number) as [number, number, number, number]
+      const [x0, y0, w, h] = s.viewBox.split(' ').map(Number) as [number, number, number, number]
       s.elements.forEach((e) =>
         [e.p, e.d].forEach(([x, y]) => {
-          expect(x).toBeGreaterThanOrEqual(0)
-          expect(x).toBeLessThanOrEqual(w)
-          expect(y).toBeGreaterThanOrEqual(0)
-          expect(y).toBeLessThanOrEqual(h)
+          expect(x).toBeGreaterThanOrEqual(x0)
+          expect(x).toBeLessThanOrEqual(x0 + w)
+          expect(y).toBeGreaterThanOrEqual(y0)
+          expect(y).toBeLessThanOrEqual(y0 + h)
         }),
       )
     }))

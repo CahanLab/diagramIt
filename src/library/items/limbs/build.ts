@@ -175,12 +175,16 @@ export function assemble(rec: Recipe): LimbStage {
     elements.push(capsule(carp, s4, add(c, mul(an, (-p.autopod.width * 0.05) / l)), add(c, mul(an, (-p.autopod.width * 0.35) / l)), 2.2))
   }
   elements.push(...digitElements(rec, g, p))
+  // Tight viewBox around the silhouette (margin for outline, claws and spline overshoot).
+  const m = 6
+  const [bx0, by0, bx1, by1] = g.bounds
+  const vb = [Math.floor(bx0 - m), Math.floor(by0 - m), Math.ceil(bx1 + m), Math.ceil(by1 + m)]
   const stage: LimbStage = {
     limb: rec.limb,
     stage: rec.stage,
     theiler: rec.theiler,
     lengthMm: rec.lengthMm,
-    viewBox: '0 0 160 100',
+    viewBox: `${vb[0]} ${vb[1]} ${vb[2]! - vb[0]!} ${vb[3]! - vb[1]!}`,
     outline: g.outline,
     elements,
     muscles: rec.muscles(g, p),

@@ -95,6 +95,8 @@ export interface LimbGeometry {
   zeugopodDir: Pt
   autopodDir: Pt
   rays: Ray[]
+  /** content bounds [minX, minY, maxX, maxY] of the silhouette points */
+  bounds: [number, number, number, number]
 }
 
 export function buildLimb(p: LimbParams): LimbGeometry {
@@ -175,7 +177,10 @@ export function buildLimb(p: LimbParams): LimbGeometry {
     distal.push(cornerP, lerp(cornerP, lower[0]!, 0.5))
   }
   const pts = [...upper, ...distal, ...lower]
+  const xs = pts.map((q) => q[0])
+  const ys = pts.map((q) => q[1])
   return {
+    bounds: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
     outline: smoothClosed(pts),
     margin: smoothOpen(margin),
     shoulder,
