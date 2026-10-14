@@ -44,7 +44,8 @@ release with that CHANGELOG section as notes).
   the parametric silhouette in `items/limbs/geometry.ts`; assembly in
   `items/limbs/build.ts`). Drawing styles (basic / camera lucida / realistic)
   are renderers over these models: `generators/limbLucida.ts`,
-  `items/embryos/model.ts`; items carry `styles`, the store carries
+  `items/embryos/model.ts`, with `generators/tone.ts` (path flattener,
+  polygon distance, tonal stipple sampler) behind the camera lucida shading; items carry `styles`, the store carries
   `drawingStyle`, inserted groups carry `data.style`, `insert.restyleIcon`
   re-renders in place. Specs: `docs/superpowers/specs/2026-10-14-mouse-embryo-limb-icons-design.md`,
   `docs/superpowers/specs/2026-10-14-drawing-styles-design.md`.

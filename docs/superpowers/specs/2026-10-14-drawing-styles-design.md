@@ -137,6 +137,45 @@ names, keywords and search are unchanged; the library count stays 74.
 - PyMuPDF does not render gradient fills; realistic sheets are checked with
   `qlmanage -s <max dimension>`.
 
+## Camera lucida v2: stipple tone and epithelial detail (2026-10-14, phase 3)
+
+Owner supplied Carter (1954) figures reproduced in Grüneberg (1963): Fig. 123,
+the E12.5 hindlimb (structures projected on the footplate plane: AER as an
+epithelial band, marginal blood sinus, limb axial artery, femur/tibia/fibula
+blastemas as density fields, mesenchyme stippled with graded density) and
+Fig. 125, E14 embryos shaded entirely by stipple of varying size and density
+(crease shadows under the chin and limbs, dense along the back, vibrissae as
+ring rows, eye as a ring with a crescent lid).
+
+- **Tone engine** (`generators/tone.ts`, pure): SVG path flattener
+  (M L H V C S Q T A Z, absolute and relative) to polygons with an optional
+  `translate/rotate/scale` transform; point-in-polygon; distance to polygon
+  edge; `stippleField(polygons, tone, opts)` samples a jittered grid, keeps a
+  dot with probability `tone(x, y)` and sizes it by tone, emitting three
+  `<path>`s (small, medium, large dots) so an icon stays a handful of objects.
+  Seeded (mulberry32) from the icon id.
+- **Limb tone**: base 0.12 (0.2 proximal to 0.1 in the plate), edge term
+  rising to +0.65 within 6 units of the silhouette, blastema halo
+  `+0.7·exp(-(d/1.2r)^2)` around each element (condensations have no outline
+  and are the halo itself), capped at 1. Cartilage keeps the outlined dense
+  core from v1.
+- **AER band**: at AER stages the distal margin gets two parallel lines (just
+  inside the outline and 2 units outside) with perpendicular cell boundaries
+  every 1.3 units. **Vessels** (`LimbStage.vessels`, generated in `build.ts`
+  for E11.5 to E13.5): marginal sinus 3.2 units inside the margin as a dashed
+  1.6 line, axial artery from the proximal limb between the zeugopod bones to
+  the plate centre, 2.2 tapering to 1.4. Drawn in the lucida skeleton version
+  (ink) and the realistic skeleton version (translucent red).
+- **Shape corrections** from Fig. 123: E12.5 hindlimb straight and tapered
+  with a broad round plate and a smooth margin (digit positions as faint
+  bumps); the forelimb keeps Martin's corrugated handplate.
+- **Embryo tone**: body polygon from the `body` part; edge term as for limbs;
+  crease shadows within 4 units of limb, hand, foot and tail parts (sausage
+  parts use their centreline and half-width); vibrissae as rings from E13.5;
+  eye as ring with pupil; pinna crescent unchanged.
+- **Lazy styles**: `styles.<style>.svg` is a getter rendered on first use and
+  cached, so startup does not render 148 stippled icons.
+
 ## Out of scope
 
 - Styles for icons outside the Developmental stages category.

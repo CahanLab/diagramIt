@@ -6,6 +6,7 @@
  * `renderEmbryo`, so the styles cannot drift apart.
  */
 import type { LibraryItem } from '../../types'
+import { lazyRendering } from '../../lazy'
 import { EMBRYO_PALETTE, renderEmbryo, type EmbryoModel, type EmbryoPart } from './model'
 
 const VB = '0 0 100 120'
@@ -147,7 +148,7 @@ const item = (model: EmbryoModel, meta: ReturnType<typeof base>, width: number, 
   height,
   svg: renderEmbryo(model, 'basic'),
   ...EMBRYO_PALETTE.basic,
-  styles: { lucida: { svg: renderEmbryo(model, 'lucida'), ...EMBRYO_PALETTE.lucida }, realistic: { svg: renderEmbryo(model, 'realistic'), ...EMBRYO_PALETTE.realistic } },
+  styles: { lucida: lazyRendering(() => renderEmbryo(model, 'lucida'), EMBRYO_PALETTE.lucida.primary, EMBRYO_PALETTE.lucida.secondary), realistic: lazyRendering(() => renderEmbryo(model, 'realistic'), EMBRYO_PALETTE.realistic.primary, EMBRYO_PALETTE.realistic.secondary) },
 })
 
 export const items: LibraryItem[] = [

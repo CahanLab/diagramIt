@@ -6,9 +6,13 @@
  * Spec: docs/superpowers/specs/2026-10-14-drawing-styles-design.md
  */
 import type { Element, LimbStage, LimbVersion, Muscle, Nerve } from '../items/limbs/types'
+import { distToPolygon, distToSegment, flattenPath, hash as hashStr, resample, stippleField, type Polygon } from './tone'
 
 export const LUCIDA = {
   outline: 1.1,
+  /** tonal stipple over the mesenchyme (Carter 1954): grid spacing and dot diameters */
+  toneSpacing: 1.5,
+  toneSizes: [0.55, 0.85, 1.2] as [number, number, number],
   feature: 0.9,
   dot: 0.9,
   hatch: 0.7,
@@ -33,11 +37,7 @@ function rng(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
 }
-function hash(s: string): number {
-  let h = 2166136261
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619)
-  return h >>> 0
-}
+const hash = hashStr
 
 /**
  * Stipple inside a capsule from p to d with half-width r. `falloff` thins the
@@ -140,7 +140,8 @@ function element(e: Element, seed: string): string {
   const cls = `el ${e.name}${e.digit ? `-${e.digit}` : ''} ${e.state}`
   switch (e.state) {
     case 'condensation':
-      return `<g class="${cls}">${dots(stippleCapsule(e, LUCIDA.spacing.condensation, true, random))}</g>`
+      // the blastema is a density halo in the tonal field; a sparse core marks its axis
+      return `<g class="${cls}">${dots(stippleCapsule({ ...e, r: e.r * 0.55 }, LUCIDA.spacing.condensation, true, random))}</g>`
     case 'cartilage':
       return `<g class="${cls}"><path d="${capsuleOutline(e)}" stroke-width="0.8"/>${dots(stippleCapsule(e, LUCIDA.spacing.cartilage, false, random, 0.9))}</g>`
     case 'sleeve': {
@@ -171,20 +172,66 @@ function flankExtensions(stage: LimbStage): string {
   return ext(anterior, 1) + ext(posterior, -1)
 }
 
+/** Tonal stipple over the whole silhouette: edge darkening, proximal-to-distal gradient, blastema halos. */
+function toneField(stage: LimbStage, version: LimbVersion, poly: Polygon): string {
+  const lm = stage.landmarks
+  const axisLen = Math.hypot(lm.wrist[0] - lm.shoulder[0], lm.wrist[1] - lm.shoulder[1]) || 1
+  const elements = version === 'outline' ? [] : stage.elements
+  const tone = (x: number, y: number): number => {
+    const p: [number, number] = [x, y]
+    const along = Math.max(0, Math.min(1, ((x - lm.shoulder[0]) * (lm.wrist[0] - lm.shoulder[0]) + (y - lm.shoulder[1]) * (lm.wrist[1] - lm.shoulder[1])) / (axisLen * axisLen)))
+    // the proximal cut is not a surface edge: fade the edge term out within 8 units of the flank
+    const flankFade = Math.min(1, (along * axisLen) / 8)
+    const edge = Math.max(0, 1 - distToPolygon(p, poly) / 6) * flankFade
+    let t = 0.08 + 0.1 * (1 - along) + 0.62 * Math.pow(edge, 1.6)
+    for (const e of elements) {
+      const d = distToSegment(p, e.p, e.d) - e.r
+      if (e.state === 'condensation') {
+        t += 0.75 * Math.exp(-Math.pow(Math.max(0, d) / (e.r * 1.1), 2))
+      } else {
+        if (d < 0) return 0
+        t += 0.4 * Math.exp(-Math.pow(d / (e.r * 0.8), 2))
+      }
+    }
+    return Math.min(1, t)
+  }
+  const layers = stippleField([poly], tone, { spacing: LUCIDA.toneSpacing, seed: hash(`${stage.limb}:${stage.stage}:${version}:tone`), sizes: LUCIDA.toneSizes })
+  return layers.map((l) => `<path d="${l.d}" stroke-width="${l.width}" stroke-linecap="round"/>`).join('')
+}
+
+/** The apical ectodermal ridge as a band of epithelial cells: two parallel lines with cell boundaries between them. */
+function aerBand(aer: string): string {
+  const line = flattenPath(aer)[0]?.points
+  if (!line || line.length < 2) return ''
+  const samples = resample(line, 1.3)
+  const inner: string[] = []
+  const outer: string[] = []
+  const ticks: string[] = []
+  samples.forEach(({ p, n: nn }, i) => {
+    const a: [number, number] = [p[0] - nn[0] * 0.2, p[1] - nn[1] * 0.2]
+    const b: [number, number] = [p[0] + nn[0] * 2, p[1] + nn[1] * 2]
+    inner.push(`${i ? 'L' : 'M'}${n(a[0])} ${n(a[1])}`)
+    outer.push(`${i ? 'L' : 'M'}${n(b[0])} ${n(b[1])}`)
+    ticks.push(`M${n(a[0])} ${n(a[1])}L${n(b[0])} ${n(b[1])}`)
+  })
+  return `<path d="${inner.join('')}" stroke-width="0.8"/><path d="${outer.join('')}" stroke-width="0.8"/><path d="${ticks.join('')}" stroke-width="0.45"/>`
+}
+
 export function limbLucidaSvg(stage: LimbStage, version: LimbVersion): string {
-  const parts: string[] = [
-    `<path d="${stage.outline}" fill="#ffffff" stroke="none"/>`,
-    `<path d="${stage.outlineOpen}" stroke-width="${LUCIDA.outline}"/>`,
-    flankExtensions(stage),
-  ]
-  if (stage.aer) parts.push(`<path d="${stage.aer}" stroke-width="1.7" stroke-opacity="0.8"/>`)
-  for (const [x, y] of stage.hairPlacodes ?? []) parts.push(`<circle cx="${n(x)}" cy="${n(y)}" r="1" stroke-width="0.6"/>`)
-  if (stage.decorLucida) parts.push(stage.decorLucida)
+  const poly = flattenPath(stage.outline)[0]?.points ?? []
+  const parts: string[] = [`<path d="${stage.outline}" fill="#ffffff" stroke="none"/>`, toneField(stage, version, poly)]
   if (version !== 'outline') parts.push(...stage.elements.map((e, i) => element(e, `${stage.limb}:${stage.stage}:${i}`)))
+  if (version === 'skeleton') {
+    for (const v of stage.vessels ?? []) parts.push(`<path d="${v.path}" stroke-width="${n(v.width)}"${v.dash ? ` stroke-dasharray="${v.dash}"` : ''}/>`)
+  }
   if (version === 'muscle') {
     parts.push(...stage.muscles.map(muscle))
     for (const t of stage.tendons) parts.push(`<path d="${t.path}" stroke-width="3.2"/><path d="${t.path}" stroke="#ffffff" stroke-width="1.6"/>`)
   }
   if (version === 'nerves') for (const nv of stage.nerves) parts.push(`<path d="${nv.path}" stroke-width="${LUCIDA.nerveWidth[nv.width]}"/>`)
+  parts.push(`<path d="${stage.outlineOpen}" stroke-width="${LUCIDA.outline}"/>`, flankExtensions(stage))
+  if (stage.aer) parts.push(aerBand(stage.aer))
+  for (const [x, y] of stage.hairPlacodes ?? []) parts.push(`<circle cx="${n(x)}" cy="${n(y)}" r="1" fill="#ffffff" stroke-width="0.6"/>`)
+  if (stage.decorLucida) parts.push(stage.decorLucida)
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${stage.viewBox}"><g fill="none" stroke="#PRIMARY" stroke-width="${LUCIDA.outline}" stroke-linejoin="round" stroke-linecap="round">${parts.join('')}</g></svg>`
 }

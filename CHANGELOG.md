@@ -30,6 +30,26 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-14
+
+### Changed
+
+- Camera lucida style redrawn after Carter (1954) as reproduced in Grüneberg,
+  *The Pathology of Development* (Figs. 123 and 125): tone now comes from
+  stipple of graded density and dot size (denser toward the silhouette edge
+  and in creases against limbs, with a halo around each skeletal blastema);
+  the apical ectodermal ridge is drawn as an epithelial band of cells; the
+  marginal blood sinus and limb axial artery appear in the skeleton version
+  at E11.5 to E13.5 (ink in camera lucida, translucent red in realistic);
+  precartilaginous condensations are density fields rather than outlined
+  capsules; embryo vibrissae are ring rows from E13.5 and the eye a ring with
+  a pupil.
+- E12.5 hindlimb reshaped to Carter's proportions: straight tapered proximal
+  segment, broad round footplate with a smooth margin and faint digit bumps.
+  Basic and realistic styles inherit the shape.
+- Alternative styles render lazily on first use (the stippled icons are
+  about 14 KB each), so the app starts as fast as before.
+
 ## [0.7.0] - 2026-10-14
 
 ### Added

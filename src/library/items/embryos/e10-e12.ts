@@ -11,6 +11,7 @@
  * their outlines show; lens, eye and otic vesicle use #SECONDARY.
  */
 import type { LibraryItem } from '../../types'
+import { lazyRendering } from '../../lazy'
 import { EMBRYO_PALETTE, renderEmbryo } from './model'
 import type { EmbryoModel, EmbryoPart } from './model'
 
@@ -315,7 +316,7 @@ const item = (model: EmbryoModel, id: string, name: string, keywords: string[], 
   primary: EMBRYO_PALETTE.basic.primary,
   secondary: EMBRYO_PALETTE.basic.secondary,
   svg: renderEmbryo(model, 'basic'),
-  styles: { lucida: { svg: renderEmbryo(model, 'lucida'), ...EMBRYO_PALETTE.lucida }, realistic: { svg: renderEmbryo(model, 'realistic'), ...EMBRYO_PALETTE.realistic } },
+  styles: { lucida: lazyRendering(() => renderEmbryo(model, 'lucida'), EMBRYO_PALETTE.lucida.primary, EMBRYO_PALETTE.lucida.secondary), realistic: lazyRendering(() => renderEmbryo(model, 'realistic'), EMBRYO_PALETTE.realistic.primary, EMBRYO_PALETTE.realistic.secondary) },
 })
 
 export const items: LibraryItem[] = [

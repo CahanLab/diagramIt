@@ -9,6 +9,7 @@
 import type { Stage } from '../limbs/types'
 import type { DrawingStyle } from '../../types'
 import { OUTLINE } from '../../types'
+import { distToPolygon, distToPolyline, flattenPath, hash, pointInPolygon, stippleField, type Polygon } from '../../generators/tone'
 
 export type EmbryoPartTag =
   | 'body' | 'limb' | 'hand' | 'foot' | 'tail'
@@ -89,11 +90,54 @@ function basicPart(p: EmbryoPart): string {
 }
 
 /** Camera lucida: ink is #PRIMARY, interiors white, thin uniform lines, no colour. */
-const LUCIDA = { outline: 1.1, feature: 0.9, dot: 1.2 }
+const LUCIDA = { outline: 1.1, feature: 0.9, dot: 1.2, toneSpacing: 1.4, toneSizes: [0.55, 0.85, 1.2] as [number, number, number] }
 
-function lucidaPart(p: EmbryoPart): string {
+const dotPositions = (d: string): [number, number][] => [...d.matchAll(/M(-?[\d.]+)[ ,](-?[\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])])
+
+/**
+ * Tonal stipple over the body (Carter 1954, Fig. 125): denser toward the
+ * silhouette edge and in the creases against limbs, hands, feet and tail.
+ */
+function embryoTone(model: EmbryoModel): string {
+  const body = model.parts.find((p) => p.tag === 'body')
+  if (!body) return ''
+  const poly = flattenPath(body.d, body.transform)[0]?.points
+  if (!poly || poly.length < 3) return ''
+  const creases: { line: Polygon; hw: number; closed: boolean }[] = []
+  for (const p of model.parts) {
+    if (!['limb', 'hand', 'foot', 'tail', 'hernia'].includes(p.tag)) continue
+    for (const sub of flattenPath(p.d, p.transform)) {
+      if (p.draw === 'sausage') creases.push({ line: sub.points, hw: (p.w ?? 10) / 2, closed: false })
+      else if (p.draw === 'fill' || p.draw === 'fill-white') creases.push({ line: sub.points, hw: 0, closed: true })
+    }
+  }
+  const tone = (x: number, y: number): number => {
+    const q: [number, number] = [x, y]
+    const edge = Math.max(0, 1 - distToPolygon(q, poly) / 6)
+    let t = 0.06 + 0.7 * Math.pow(edge, 1.6)
+    for (const c of creases) {
+      let d: number
+      if (c.closed) {
+        if (pointInPolygon(q, c.line)) return 0
+        d = distToPolygon(q, c.line)
+      } else {
+        d = distToPolyline(q, c.line) - c.hw
+        if (d < 0) return 0
+      }
+      t += 0.75 * Math.exp(-Math.pow(d / 4.5, 2))
+    }
+    return Math.min(1, t)
+  }
+  return stippleField([poly], tone, { spacing: LUCIDA.toneSpacing, seed: hash(`embryo:${model.stage}`), sizes: LUCIDA.toneSizes })
+    .map((l) => `<path d="${l.d}" stroke-width="${l.width}" stroke-linecap="round"/>`)
+    .join('')
+}
+
+function lucidaPart(p: EmbryoPart, stage: Stage): string {
   switch (p.draw) {
     case 'fill':
+      if (p.tag === 'body') return `<path d="${p.d}" fill="#ffffff" stroke="none"/>` // stroked after the tonal field
+      return `<path d="${p.d}" fill="#ffffff" stroke-width="${LUCIDA.outline}"/>`
     case 'fill-white':
     case 'ring-secondary':
       return `<path d="${p.d}" fill="#ffffff" stroke-width="${LUCIDA.outline}"/>`
@@ -101,14 +145,19 @@ function lucidaPart(p: EmbryoPart): string {
       const w = p.w ?? 10
       return `<path d="${p.d}" stroke-width="${w - 5 + 2 * LUCIDA.outline}"/><path d="${p.d}" stroke="#ffffff" stroke-width="${w - 5}"/>`
     }
-    case 'fill-secondary':
-      // the pigmented eye is solid ink; the otic vesicle and pinna are outlined
-      return p.tag === 'eye'
-        ? `<path d="${p.d}" fill="#PRIMARY" stroke-width="${LUCIDA.feature}"/>`
-        : `<path d="${p.d}" fill="#ffffff" stroke-width="${LUCIDA.feature}"/>`
+    case 'fill-secondary': {
+      // the pigmented eye is a ring with a pupil; the otic vesicle and pinna are outlined
+      if (p.tag !== 'eye') return `<path d="${p.d}" fill="#ffffff" stroke-width="${LUCIDA.feature}"/>`
+      const c = circleOf(p.d)
+      if (!c) return `<path d="${p.d}" fill="#PRIMARY" stroke-width="${LUCIDA.feature}"/>`
+      return `<path d="${p.d}" fill="#ffffff" stroke-width="${LUCIDA.feature}"/><circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${(c.r * 0.45).toFixed(1)}" fill="#PRIMARY" stroke="none"/>`
+    }
     case 'fill-dark':
       return `<path d="${p.d}" fill="#PRIMARY" stroke-width="${LUCIDA.feature}"/>`
     case 'dots':
+      if (p.tag === 'vibrissae' && stage >= 'E13.5') {
+        return dotPositions(p.d).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.1" fill="#ffffff" stroke-width="0.55"/>`).join('')
+      }
       return `<path d="${p.d}" stroke-width="${LUCIDA.dot}" stroke-linecap="round"/>`
     case 'stroke':
     case 'stroke-secondary':
@@ -185,8 +234,14 @@ export function renderEmbryo(model: EmbryoModel, style: DrawingStyle): string {
   switch (style) {
     case 'basic':
       return wrapSvg(model.viewBox, 2.5, model.parts.map((p) => withTransform(p, basicPart(p))).join(''))
-    case 'lucida':
-      return wrapSvg(model.viewBox, LUCIDA.outline, model.parts.map((p) => withTransform(p, lucidaPart(p))).join('')).replace(`stroke="${OUTLINE}"`, 'stroke="#PRIMARY"')
+    case 'lucida': {
+      const body = model.parts.find((p) => p.tag === 'body')
+      const parts = model.parts.map((p) => withTransform(p, lucidaPart(p, model.stage)))
+      // tonal field goes right after the body fill, the body outline right after the field
+      const i = model.parts.findIndex((p) => p.tag === 'body')
+      if (body && i >= 0) parts.splice(i + 1, 0, embryoTone(model), withTransform(body, `<path d="${body.d}" stroke-width="${LUCIDA.outline}"/>`))
+      return wrapSvg(model.viewBox, LUCIDA.outline, parts.join('')).replace(`stroke="${OUTLINE}"`, 'stroke="#PRIMARY"')
+    }
     case 'realistic': {
       const gid = `re-${model.stage.toLowerCase().replace('.', '-')}-body`
       const defs =

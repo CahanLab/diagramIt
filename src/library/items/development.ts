@@ -8,6 +8,7 @@ import { availableVersions, limbDefaultSize, limbSvg } from '../generators/limb'
 import { limbLucidaSvg } from '../generators/limbLucida'
 import { limbRealisticSvg } from '../generators/limbRealistic'
 import { OUTLINE } from '../types'
+import { lazyRendering } from '../lazy'
 import type { LimbStage, LimbVersion, Stage } from './limbs/types'
 import { forelimb } from './limbs/forelimb'
 import { hindlimb } from './limbs/hindlimb'
@@ -55,8 +56,8 @@ export function limbItems(stages: LimbStage[]): LibraryItem[] {
         primary: PRIMARY,
         secondary: CARTILAGE,
         styles: {
-          lucida: { svg: limbLucidaSvg(s, v), primary: OUTLINE },
-          realistic: { svg: limbRealisticSvg(s, v), primary: '#e9b99b', secondary: '#7fa8dc' },
+          lucida: lazyRendering(() => limbLucidaSvg(s, v), OUTLINE),
+          realistic: lazyRendering(() => limbRealisticSvg(s, v), '#e9b99b', '#7fa8dc'),
         },
       })
     }

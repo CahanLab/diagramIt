@@ -3,7 +3,8 @@
  * tissue recipe. Used by forelimb.ts and hindlimb.ts. Pure.
  */
 import { add, blob, buildLimb, lerp, mul, normal, polyline, smoothOpen, type LimbGeometry, type LimbParams, type Pt, type Ray } from './geometry'
-import type { Element, ElementName, ElementState, Limb, LimbStage, Muscle, Nerve, Stage, Tendon } from './types'
+import { flattenPath, resample } from '../../generators/tone'
+import type { Element, ElementName, ElementState, Limb, LimbStage, Muscle, Nerve, Stage, Tendon, Vessel } from './types'
 
 export interface Recipe {
   limb: Limb
@@ -193,7 +194,10 @@ export function assemble(rec: Recipe): LimbStage {
     tendons: rec.tendons(g, p),
     nerves: rec.nerves(g, p),
   }
-  if (rec.aer) stage.aer = g.margin
+  if (rec.aer) {
+    stage.aer = g.margin
+    stage.vessels = vessels(g, p)
+  }
   if (rec.hairPlacodes) stage.hairPlacodes = rec.hairPlacodes
   if (rec.decor) {
     stage.decor = rec.decor(g, 'basic')
@@ -241,4 +245,18 @@ export function padsAndWrinkles(g: LimbGeometry, p: LimbParams, pads: boolean, w
     })
   }
   return parts.join('')
+}
+
+/** Marginal blood sinus just inside the AER and the limb axial artery (Carter 1954, Fig. 123 in Grüneberg 1963). */
+export function vessels(g: LimbGeometry, p: LimbParams): Vessel[] {
+  const margin = flattenPath(g.margin)[0]?.points ?? []
+  const sinus = resample(margin, 1.2).map(({ p: q, n }) => add(q, mul(n, -3.2)))
+  const axisEnd = add(g.wrist, mul(g.autopodDir, p.autopod.palm * 0.55))
+  const prox = lerp(g.shoulder, g.elbow, 0.05)
+  const mid = lerp(g.elbow, g.wrist, 0.5)
+  const out: Vessel[] = []
+  if (sinus.length > 2) out.push({ name: 'marginal sinus', path: smoothOpen(sinus), width: 1.6, dash: '7 1.6' })
+  out.push({ name: 'axial artery (proximal)', path: smoothOpen([prox, lerp(g.shoulder, g.elbow, 0.55), g.elbow, mid]), width: 1.5 })
+  out.push({ name: 'axial artery (distal)', path: smoothOpen([mid, g.wrist, lerp(g.wrist, axisEnd, 0.5), axisEnd]), width: 1 })
+  return out
 }

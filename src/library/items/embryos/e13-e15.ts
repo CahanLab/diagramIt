@@ -11,6 +11,7 @@
  * local-frame shapes (digits pointing -y) placed with a transform.
  */
 import type { LibraryItem } from '../../types'
+import { lazyRendering } from '../../lazy'
 import { EMBRYO_PALETTE, renderEmbryo, type EmbryoModel, type EmbryoPart } from './model'
 
 const VIEW = '0 0 100 120'
@@ -190,7 +191,7 @@ export const items: LibraryItem[] = meta.map((m, i) => ({
   primary: EMBRYO_PALETTE.basic.primary,
   secondary: EMBRYO_PALETTE.basic.secondary,
   styles: {
-    lucida: { svg: renderEmbryo(models[i]!, 'lucida'), ...EMBRYO_PALETTE.lucida },
-    realistic: { svg: renderEmbryo(models[i]!, 'realistic'), ...EMBRYO_PALETTE.realistic },
+    lucida: lazyRendering(() => renderEmbryo(models[i]!, 'lucida'), EMBRYO_PALETTE.lucida.primary, EMBRYO_PALETTE.lucida.secondary),
+    realistic: lazyRendering(() => renderEmbryo(models[i]!, 'realistic'), EMBRYO_PALETTE.realistic.primary, EMBRYO_PALETTE.realistic.secondary),
   },
 }))

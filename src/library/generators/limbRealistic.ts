@@ -134,6 +134,7 @@ export function limbRealisticSvg(stage: LimbStage, version: LimbVersion): string
   for (const [x, y] of stage.hairPlacodes ?? []) parts.push(`<circle cx="${n(x)}" cy="${n(y)}" r="1.3" fill="#PRIMARYD" fill-opacity="0.35" stroke="none"/>`)
   if (stage.decor) parts.push(stage.decor)
   if (version !== 'outline') parts.push(...stage.elements.map(element))
+  if (version === 'skeleton') for (const v of stage.vessels ?? []) parts.push(`<path d="${v.path}" stroke="#b03a2e" stroke-width="${n(v.width)}" stroke-opacity="0.55"${v.dash ? ` stroke-dasharray="${v.dash}"` : ''}/>`)
   if (version === 'muscle') {
     parts.push(...stage.muscles.map(muscle))
     for (const t of stage.tendons) parts.push(`<path d="${t.path}" stroke="${REALISTIC.tendon}" stroke-width="3.2" stroke-opacity="0.9"/><path d="${t.path}" stroke="${REALISTIC.tendonCore}" stroke-width="1.3" stroke-opacity="0.85"/>`)

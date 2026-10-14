@@ -55,6 +55,15 @@ export interface Nerve {
   width: 1 | 2 | 3
 }
 
+/** Blood vessel drawn in the skeleton version at AER stages (marginal sinus, axial artery). */
+export interface Vessel {
+  name: string
+  path: string
+  width: number
+  /** SVG dash pattern, e.g. gaps in the marginal sinus */
+  dash?: string
+}
+
 export interface LimbStage {
   limb: Limb
   stage: Stage
@@ -81,6 +90,7 @@ export interface LimbStage {
   muscles: Muscle[]
   tendons: Tendon[]
   nerves: Nerve[]
+  vessels?: Vessel[]
 }
 
 export type LimbVersion = 'outline' | 'skeleton' | 'muscle' | 'nerves'

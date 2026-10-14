@@ -59,8 +59,8 @@ const GEOMETRY: Record<Stage, LimbParams> = {
   'E10.5': { shoulder: [14, 50], stylopod: { len: 6, angle: 4, width: 18 }, zeugopod: { len: 4, angle: 2, width: 17 }, autopod: { angle: 0, palm: 8, width: 15, spacing: 0 }, digits: [], web: 1 },
   'E11.5': { shoulder: [14, 50], stylopod: { len: 12, angle: 6, width: 18 }, zeugopod: { len: 8, angle: 2, width: 17 }, autopod: { angle: 0, palm: 16, width: 17, spacing: 0 }, digits: [], web: 1 },
   'E12.5': {
-    shoulder: [12, 48], stylopod: { len: 22, angle: 14, width: 12 }, zeugopod: { len: 20, angle: -10, width: 11 }, autopod: { angle: -10, palm: 22, width: 13, spacing: 10, arc: 2 },
-    digits: [{ angle: -24, len: 9, width: 5.4 }, { angle: -12, len: 12, width: 5.6 }, { angle: 0, len: 13, width: 5.6 }, { angle: 12, len: 12, width: 5.6 }, { angle: 24, len: 10, width: 5.4 }], web: 0.95,
+    shoulder: [12, 50], stylopod: { len: 20, angle: 6, width: 11 }, zeugopod: { len: 18, angle: 2, width: 9.5 }, autopod: { angle: 0, palm: 32, width: 11, spacing: 11, arc: 6 },
+    digits: [{ angle: -22, len: 8, width: 7.5 }, { angle: -11, len: 9, width: 7.5 }, { angle: 0, len: 9, width: 7.5 }, { angle: 11, len: 9, width: 7.5 }, { angle: 22, len: 8, width: 7.5 }], web: 1,
   },
   'E13.5': {
     shoulder: [12, 46], stylopod: { len: 25, angle: 18, width: 11.5 }, zeugopod: { len: 23, angle: -12, width: 10.5 }, autopod: { angle: -12, palm: 29, width: 12, spacing: 9.5, arc: 3 },
