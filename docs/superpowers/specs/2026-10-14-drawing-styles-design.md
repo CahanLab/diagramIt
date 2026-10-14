@@ -176,6 +176,59 @@ ring rows, eye as a ring with a crescent lid).
 - **Lazy styles**: `styles.<style>.svg` is a getter rendered on first use and
   cached, so startup does not render 148 stippled icons.
 
+## Silhouette fidelity (2026-10-14, phase 4)
+
+Owner supplied screenshots of the eMouseAtlas 3D models (E11.5, E12.5 whole
+embryos, E14.5 isolated hindlimb, E15.5 whole embryo) and judged the limb
+outlines inaccurate: slab-like buds, a stalk-thin arm under an oversized plate
+at E12.5, hooked notches on the E12.5 footplate margin, a zig-zag of joint
+angles, a thumb-like digit 1, and blunt digits. Targets were taken from the
+screenshots and the Theiler plates TS17 to TS26, checked against Carter's
+E12.5 hindlimb and Martin's handplates.
+
+Changes to the silhouette engine (`items/limbs/geometry.ts`), all styles
+inherit them:
+
+- **Buds** (no digits) are domes: `bud { base, width, at }` gives the
+  half-width at the flank, the maximum half-width and where it occurs; the
+  base section follows a quarter sine, the tip a quarter ellipse sampled
+  uniformly in angle. E10.5 is a half ellipse (`at` 0), E11.5 a rounded
+  paddle slightly wider than its base.
+- **Flank cut**: the silhouette is the open spline round the limb closed by a
+  straight line (`outline === outlineOpen + 'z'`), which removes the spline
+  overshoot that put notches at the flank corners.
+- **Segments** take an optional `bulge` (extra half-width at 45 % of the
+  segment as a fraction of the width) for the convex thigh and a softer
+  forearm; `base` sets the half-width at the flank. Joint angles were
+  reduced to a gentle S (stylopod 12 to 16°, zeugopod −3 to −4°).
+- **Plate**: the digit bases drop proximally by `k² · arc` from the middle
+  ray, so the bases lie on a round plate; the outline fans in a straight line
+  from the wrist edge to the outer side of the outer digit's base, which
+  continues into that digit's outer edge; a scalloped plate bows that line
+  outward by 12 % of its length.
+- **Webbing**: `web ≥ PLATE_WEB (0.75)` draws a plate whose margin is the
+  digit apexes and the clefts between them (scallop depth `(1 − web)·len`);
+  below it each digit gets a rounded tip of half-width
+  `min(tipWidth, 0.42·spacing)` and the cleft is never shallower than the
+  tip rounding. This removed the self-intersections that drew hooks when
+  digit widths exceeded their spacing. `stages.test.ts` now checks every
+  silhouette for self-intersection.
+- **Digits** take `tip` (tip half-width as a fraction of the base width,
+  0.55 to 0.6 from E14.5); claws scale with the tip width; digit 1 is short
+  and lies at 22 to 30° from the axis rather than opposed; the fan closes
+  from ±30° at E14.5 to ±22 to 24° from E16.5.
+- Hair placodes are derived from the geometry (`placodes(g, p, n)`) instead
+  of fixed coordinates, so they stay inside the reshaped limb.
+
+Proportions checked against the E14.5 hindlimb render: foot (ankle to toe
+tips) 47 % of the limb length (render about 45 %), thigh maximum half-width
+17 % of the length (render 16 %), ankle half-width 10 % (render 9 %), toe fan
+60° (render about 65°).
+
+Still not addressed: embryo silhouettes were not changed in this phase; the
+limbs remain dorsal views laid out nearly straight, whereas the E15.5 render
+shows the elbow and knee strongly flexed.
+
 ## Out of scope
 
 - Styles for icons outside the Developmental stages category.

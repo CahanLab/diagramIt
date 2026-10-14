@@ -17,7 +17,8 @@ export interface Recipe {
   /** which digits have which phalanges: e.g. digit 1 has no middle phalanx */
   phalanges: (digit: 1 | 2 | 3 | 4 | 5) => ('proximal-phalanx' | 'middle-phalanx' | 'distal-phalanx')[]
   aer: boolean
-  hairPlacodes?: [number, number][]
+  /** hair placode positions, derived from the geometry (see `placodes`) */
+  hairPlacodes?: (g: LimbGeometry, p: LimbParams) => [number, number][]
   decor?: (g: LimbGeometry, style: 'basic' | 'lucida') => string
   muscles: (g: LimbGeometry, p: LimbParams) => Muscle[]
   tendons: (g: LimbGeometry, p: LimbParams) => Tendon[]
@@ -198,7 +199,7 @@ export function assemble(rec: Recipe): LimbStage {
     stage.aer = g.margin
     stage.vessels = vessels(g, p)
   }
-  if (rec.hairPlacodes) stage.hairPlacodes = rec.hairPlacodes
+  if (rec.hairPlacodes) stage.hairPlacodes = rec.hairPlacodes(g, p)
   if (rec.decor) {
     stage.decor = rec.decor(g, 'basic')
     stage.decorLucida = rec.decor(g, 'lucida')
@@ -206,14 +207,31 @@ export function assemble(rec: Recipe): LimbStage {
   return stage
 }
 
+/** `count` hair placodes scattered along the stylopod and zeugopod, alternating sides. */
+export function placodes(g: LimbGeometry, p: LimbParams, count: number): [number, number][] {
+  const out: [number, number][] = []
+  for (let i = 0; i < count; i++) {
+    const t = (i + 0.5) / count
+    const onStylopod = t < 0.5
+    const from = onStylopod ? g.shoulder : g.elbow
+    const to = onStylopod ? g.elbow : g.wrist
+    const w = onStylopod ? p.stylopod.width : p.zeugopod.width
+    const nrm = normal(onStylopod ? g.stylopodDir : g.zeugopodDir)
+    const side = (i % 3) - 1
+    const q = add(lerp(from, to, 0.1 + (t % 0.5) * 1.6), mul(nrm, side * w * 0.45))
+    out.push([+q[0].toFixed(1), +q[1].toFixed(1)])
+  }
+  return out
+}
+
 /** Claw wedges at each digit tip. */
 export function claws(g: LimbGeometry, style: 'basic' | 'lucida' = 'basic'): string {
   return g.rays
     .map((r) => {
       const n = normal(r.dir)
-      const a = add(r.tip, mul(n, r.width * 0.5))
-      const b = add(r.tip, mul(n, -r.width * 0.5))
-      const t = add(r.tip, mul(r.dir, r.width * 1.6))
+      const a = add(r.tip, mul(n, r.tipWidth * 0.55))
+      const b = add(r.tip, mul(n, -r.tipWidth * 0.55))
+      const t = add(r.tip, mul(r.dir, r.tipWidth * 1.9))
       const d = `M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${t[0].toFixed(1)} ${t[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}z`
       return style === 'basic' ? `<path d="${d}" fill="#4b5563" stroke-width="1"/>` : `<path d="${d}" fill="#ffffff" stroke-width="0.9"/>`
     })

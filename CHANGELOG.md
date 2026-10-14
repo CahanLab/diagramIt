@@ -30,6 +30,22 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-14
+
+### Changed
+
+- Limb silhouettes reshaped after the eMouseAtlas 3D models and Theiler
+  plates: dome-shaped buds at E10.5 and E11.5, a stout arm under a scalloped
+  handplate at E12.5, a convex thigh that tapers into the leg, a narrow wrist
+  or ankle fanning into the digit bases, tapered digits with a short digit 1
+  close to digit 2, and a digit fan that closes to near parallel by E16.5.
+  Joint angles are a gentle S instead of a zig-zag. All three drawing styles
+  inherit the new shapes.
+- The silhouette engine closes the outline with a straight flank cut and
+  builds webbed plates from apexes and clefts only, which removes the hooked
+  notches on the E12.5 footplate margin; every silhouette is now tested for
+  self-intersection.
+
 ## [0.8.0] - 2026-10-14
 
 ### Changed

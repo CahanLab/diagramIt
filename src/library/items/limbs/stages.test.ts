@@ -3,7 +3,25 @@ import { forelimb } from './forelimb'
 import { hindlimb } from './hindlimb'
 import { FORELIMB_ELEMENTS, HINDLIMB_ELEMENTS, STAGES, type ElementName, type ElementState, type LimbStage, type Stage } from './types'
 import { availableVersions, limbSvg } from '../../generators/limb'
+import { flattenPath } from '../../generators/tone'
 import { validateItem } from '../../validate'
+
+/** true when two closed segments a-b and c-d cross (shared endpoints excluded by the caller). */
+function cross(a: [number, number], b: [number, number], c: [number, number], d: [number, number]): boolean {
+  const o = (p: [number, number], q: [number, number], r: [number, number]) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]))
+  return o(a, b, c) !== o(a, b, d) && o(c, d, a) !== o(c, d, b) && o(a, b, c) !== 0 && o(c, d, a) !== 0
+}
+function selfIntersects(d: string): boolean {
+  const pts = flattenPath(d, undefined, 6)[0]!.points
+  const n = pts.length
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue
+      if (cross(pts[i]!, pts[(i + 1) % n]!, pts[j]!, pts[(j + 1) % n]!)) return true
+    }
+  }
+  return false
+}
 
 const count = (st: LimbStage, name: ElementName, state?: ElementState) =>
   st.elements.filter((e) => e.name === name && (!state || e.state === state)).length
@@ -37,6 +55,17 @@ function common(list: LimbStage[], allowed: ReadonlySet<ElementName>) {
     list.forEach((s) => {
       if (s.stage >= 'E12.5') expect(availableVersions(s)).toEqual(['outline', 'skeleton', 'muscle', 'nerves'])
       availableVersions(s).forEach((v) => expect(validateItem(item(limbSvg(s, v)))).toEqual([]))
+    }))
+  it('no silhouette crosses itself', () => list.forEach((s) => expect(selfIntersects(s.outline), s.stage).toBe(false)))
+  it('hair placodes lie inside the viewBox', () =>
+    list.forEach((s) => {
+      const [x0, y0, w, h] = s.viewBox.split(' ').map(Number) as [number, number, number, number]
+      ;(s.hairPlacodes ?? []).forEach(([x, y]) => {
+        expect(x).toBeGreaterThan(x0)
+        expect(x).toBeLessThan(x0 + w)
+        expect(y).toBeGreaterThan(y0)
+        expect(y).toBeLessThan(y0 + h)
+      })
     }))
   it('limb length grows with stage', () => {
     for (let i = 1; i < list.length; i++) expect(list[i]!.lengthMm).toBeGreaterThan(list[i - 1]!.lengthMm)

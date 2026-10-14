@@ -5,7 +5,7 @@
  * E13.5, toes nearly separate at E14.5, femur ossification barely visible at
  * E15.5 (Rafipay et al. 2018). Spec: docs/superpowers/specs/2026-10-14-mouse-embryo-limb-icons-design.md
  */
-import { assemble, blocks, claws, digitTendons, digitalNerves, masses, padsAndWrinkles, trunks, twigs, type Recipe } from './build'
+import { assemble, blocks, claws, digitTendons, digitalNerves, masses, padsAndWrinkles, placodes, trunks, twigs, type Recipe } from './build'
 import { lerp, type LimbParams } from './geometry'
 import type { ElementName, LimbStage, Stage } from './types'
 
@@ -54,37 +54,42 @@ const phalanges = (digit: Digit): ('proximal-phalanx' | 'middle-phalanx' | 'dist
 
 const none = () => []
 
-/** Geometry per stage. The foot is broader than the hand, the hallux short and anterior, the toes stubbier. */
+/**
+ * Geometry per stage, after the eMouseAtlas 3D models and Theiler plates (TS17 to TS26), Carter 1954 (E12.5) and
+ * Martin 1990: dome buds, a thick drumstick thigh tapering into the leg, a round footplate (E12.5) that scallops
+ * (E13.5) and splits into a wide fan of tapered toes (E14.5) which closes to near parallel by E16.5; the hallux
+ * is short and anterior.
+ */
 const GEOMETRY: Record<Stage, LimbParams> = {
-  'E10.5': { shoulder: [14, 50], stylopod: { len: 6, angle: 4, width: 18 }, zeugopod: { len: 4, angle: 2, width: 17 }, autopod: { angle: 0, palm: 8, width: 15, spacing: 0 }, digits: [], web: 1 },
-  'E11.5': { shoulder: [14, 50], stylopod: { len: 12, angle: 6, width: 18 }, zeugopod: { len: 8, angle: 2, width: 17 }, autopod: { angle: 0, palm: 16, width: 17, spacing: 0 }, digits: [], web: 1 },
+  'E10.5': { shoulder: [14, 50], stylopod: { len: 5, angle: 4, width: 18 }, zeugopod: { len: 3, angle: 2, width: 17 }, autopod: { angle: 0, palm: 7, width: 15, spacing: 0 }, digits: [], web: 1, bud: { base: 19, width: 19, at: 0 } },
+  'E11.5': { shoulder: [14, 50], stylopod: { len: 11, angle: 6, width: 16 }, zeugopod: { len: 7, angle: 2, width: 15 }, autopod: { angle: 0, palm: 12, width: 18, spacing: 0 }, digits: [], web: 1, bud: { base: 15, width: 18.5, at: 0.4 } },
   'E12.5': {
-    shoulder: [12, 50], stylopod: { len: 20, angle: 6, width: 11 }, zeugopod: { len: 18, angle: 2, width: 9.5 }, autopod: { angle: 0, palm: 32, width: 11, spacing: 11, arc: 6 },
-    digits: [{ angle: -22, len: 8, width: 7.5 }, { angle: -11, len: 9, width: 7.5 }, { angle: 0, len: 9, width: 7.5 }, { angle: 11, len: 9, width: 7.5 }, { angle: 22, len: 8, width: 7.5 }], web: 1,
+    shoulder: [12, 50], base: 17, stylopod: { len: 16, angle: 6, width: 15, bulge: 0.08 }, zeugopod: { len: 14, angle: 2, width: 12, bulge: 0.05 }, autopod: { angle: 0, palm: 25, width: 13, spacing: 9.5, arc: 3.5 },
+    digits: [{ angle: -30, len: 9, width: 6 }, { angle: -15, len: 10, width: 6 }, { angle: 0, len: 10, width: 6 }, { angle: 15, len: 10, width: 6 }, { angle: 30, len: 9, width: 6 }], web: 0.97,
   },
   'E13.5': {
-    shoulder: [12, 46], stylopod: { len: 25, angle: 18, width: 11.5 }, zeugopod: { len: 23, angle: -12, width: 10.5 }, autopod: { angle: -12, palm: 29, width: 12, spacing: 9.5, arc: 3 },
-    digits: [{ angle: -24, len: 11, width: 4.8 }, { angle: -12, len: 16, width: 5 }, { angle: 0, len: 18, width: 5 }, { angle: 12, len: 16, width: 5 }, { angle: 24, len: 13, width: 4.8 }], web: 0.7,
+    shoulder: [12, 46], base: 16, stylopod: { len: 22, angle: 12, width: 14, bulge: 0.12 }, zeugopod: { len: 20, angle: -3, width: 11.5, bulge: 0.06 }, autopod: { angle: -8, palm: 24, width: 12.5, spacing: 9.5, arc: 3 },
+    digits: [{ angle: -28, len: 11, width: 5 }, { angle: -14, len: 15, width: 5.2 }, { angle: 0, len: 17, width: 5.2 }, { angle: 14, len: 15, width: 5.2 }, { angle: 28, len: 12, width: 5 }], web: 0.8,
   },
   'E14.5': {
-    shoulder: [12, 44], stylopod: { len: 30, angle: 22, width: 11 }, zeugopod: { len: 28, angle: -14, width: 10 }, autopod: { angle: -14, palm: 32, width: 11, spacing: 9, arc: 4 },
-    digits: [{ angle: -26, len: 12, width: 4.2 }, { angle: -12, len: 19, width: 4.4 }, { angle: 0, len: 21, width: 4.4 }, { angle: 12, len: 19, width: 4.4 }, { angle: 26, len: 14, width: 4.2 }], web: 0.2,
+    shoulder: [12, 44], base: 16, stylopod: { len: 27, angle: 12, width: 14.5, bulge: 0.15 }, zeugopod: { len: 24, angle: -3, width: 10.5, bulge: 0.06 }, autopod: { angle: -6, palm: 24, width: 10, spacing: 9, arc: 3 },
+    digits: [{ angle: -30, len: 13, width: 4.3, tip: 0.6 }, { angle: -15, len: 20, width: 4.5, tip: 0.6 }, { angle: 0, len: 22, width: 4.5, tip: 0.6 }, { angle: 15, len: 20, width: 4.5, tip: 0.6 }, { angle: 30, len: 15, width: 4.3, tip: 0.6 }], web: 0.3,
   },
   'E15.5': {
-    shoulder: [12, 42], stylopod: { len: 33, angle: 25, width: 10.5 }, zeugopod: { len: 31, angle: -16, width: 9.5 }, autopod: { angle: -16, palm: 34, width: 10.5, spacing: 8.5, arc: 4 },
-    digits: [{ angle: -26, len: 12, width: 3.7 }, { angle: -12, len: 20, width: 3.9 }, { angle: 0, len: 22, width: 3.9 }, { angle: 12, len: 20, width: 3.9 }, { angle: 26, len: 15, width: 3.7 }], web: 0.06,
+    shoulder: [12, 42], base: 16, stylopod: { len: 31, angle: 14, width: 14, bulge: 0.15 }, zeugopod: { len: 28, angle: -4, width: 10, bulge: 0.06 }, autopod: { angle: -8, palm: 26, width: 9.5, spacing: 8.5, arc: 2.5 },
+    digits: [{ angle: -28, len: 13, width: 3.8, tip: 0.55 }, { angle: -13, len: 21, width: 4, tip: 0.55 }, { angle: 0, len: 23, width: 4, tip: 0.55 }, { angle: 13, len: 21, width: 4, tip: 0.55 }, { angle: 28, len: 16, width: 3.8, tip: 0.55 }], web: 0.1,
   },
   'E16.5': {
-    shoulder: [12, 42], stylopod: { len: 34, angle: 25, width: 11 }, zeugopod: { len: 32, angle: -16, width: 10 }, autopod: { angle: -16, palm: 35, width: 11, spacing: 8.5, arc: 4 },
-    digits: [{ angle: -26, len: 12, width: 3.7 }, { angle: -12, len: 21, width: 3.9 }, { angle: 0, len: 23, width: 3.9 }, { angle: 12, len: 21, width: 3.9 }, { angle: 26, len: 15, width: 3.7 }], web: 0.04,
+    shoulder: [12, 42], base: 17, stylopod: { len: 32, angle: 14, width: 14.5, bulge: 0.15 }, zeugopod: { len: 29, angle: -4, width: 11, bulge: 0.06 }, autopod: { angle: -8, palm: 27, width: 9.5, spacing: 7.5, arc: 2 },
+    digits: [{ angle: -24, len: 12, width: 3.8, tip: 0.55 }, { angle: -11, len: 21, width: 4, tip: 0.55 }, { angle: 0, len: 23, width: 4, tip: 0.55 }, { angle: 11, len: 21, width: 4, tip: 0.55 }, { angle: 24, len: 16, width: 3.8, tip: 0.55 }], web: 0.06,
   },
   'E17.5': {
-    shoulder: [12, 42], stylopod: { len: 35, angle: 25, width: 12 }, zeugopod: { len: 33, angle: -16, width: 11 }, autopod: { angle: -16, palm: 36, width: 12, spacing: 9, arc: 4 },
-    digits: [{ angle: -25, len: 12, width: 3.8 }, { angle: -12, len: 21, width: 4 }, { angle: 0, len: 23, width: 4 }, { angle: 12, len: 21, width: 4 }, { angle: 25, len: 15, width: 3.8 }], web: 0.04,
+    shoulder: [12, 42], base: 18, stylopod: { len: 33, angle: 14, width: 15.5, bulge: 0.15 }, zeugopod: { len: 30, angle: -4, width: 12, bulge: 0.06 }, autopod: { angle: -8, palm: 28, width: 10.5, spacing: 8, arc: 2 },
+    digits: [{ angle: -24, len: 12, width: 4, tip: 0.55 }, { angle: -11, len: 21, width: 4.2, tip: 0.55 }, { angle: 0, len: 23, width: 4.2, tip: 0.55 }, { angle: 11, len: 21, width: 4.2, tip: 0.55 }, { angle: 24, len: 16, width: 4, tip: 0.55 }], web: 0.06,
   },
   'E18.5': {
-    shoulder: [12, 42], stylopod: { len: 36, angle: 25, width: 13 }, zeugopod: { len: 34, angle: -16, width: 12 }, autopod: { angle: -16, palm: 37, width: 13, spacing: 9.5, arc: 4 },
-    digits: [{ angle: -25, len: 12, width: 4 }, { angle: -12, len: 21, width: 4.2 }, { angle: 0, len: 23, width: 4.2 }, { angle: 12, len: 21, width: 4.2 }, { angle: 25, len: 15, width: 4 }], web: 0.04,
+    shoulder: [12, 42], base: 19, stylopod: { len: 34, angle: 14, width: 16.5, bulge: 0.15 }, zeugopod: { len: 31, angle: -4, width: 13, bulge: 0.06 }, autopod: { angle: -8, palm: 29, width: 11, spacing: 8.5, arc: 2 },
+    digits: [{ angle: -24, len: 12, width: 4.2, tip: 0.55 }, { angle: -11, len: 21, width: 4.4, tip: 0.55 }, { angle: 0, len: 23, width: 4.4, tip: 0.55 }, { angle: 11, len: 21, width: 4.4, tip: 0.55 }, { angle: 24, len: 16, width: 4.2, tip: 0.55 }], web: 0.06,
   },
 }
 
@@ -101,9 +106,9 @@ const intrinsics = (g: Parameters<Recipe['muscles']>[0]) =>
     return { name: `interosseous ${i + 1}`, path: `M${(c[0] - 2.2).toFixed(1)} ${c[1].toFixed(1)}a2.2 1.6 0 1 0 4.4 0a2.2 1.6 0 1 0 -4.4 0z` }
   })
 
-const mature = (stage: Stage, tendonTo: number, wrinkles: boolean, pads: boolean, hair?: [number, number][]): Recipe => ({
+const mature = (stage: Stage, tendonTo: number, wrinkles: boolean, pads: boolean, hair?: number): Recipe => ({
   limb: 'hindlimb', stage, theiler: THEILER[stage], lengthMm: LENGTH_MM[stage], params: GEOMETRY[stage], state: stateAt(stage), phalanges, aer: false,
-  hairPlacodes: hair,
+  hairPlacodes: hair ? (g, p) => placodes(g, p, hair) : undefined,
   decor: (g, style) => (stage >= 'E16.5' ? claws(g, style) : '') + padsAndWrinkles(g, GEOMETRY[stage], pads, wrinkles, style),
   muscles: (g, p) => [...blocks(g.shoulder, g.elbow, p.stylopod.width, STYLO4), ...blocks(g.elbow, g.wrist, p.zeugopod.width, ZEUGO4), ...intrinsics(g)],
   tendons: (g) => digitTendons(g, tendonTo, 'extensor digitorum longus'),
@@ -130,7 +135,7 @@ const RECIPES: Recipe[] = [
     tendons: (g, p) => [{ name: 'ankle tendon progenitor field', path: `M${(g.wrist[0] - 2).toFixed(1)} ${(g.wrist[1] - p.autopod.width * 0.6).toFixed(1)}Q${(g.wrist[0] + 8).toFixed(1)} ${g.wrist[1].toFixed(1)} ${(g.wrist[0] - 2).toFixed(1)} ${(g.wrist[1] + p.autopod.width * 0.6).toFixed(1)}` }],
     nerves: (g, p) => [...trunks(g, p, ['femoral', 'sciatic (peroneal)', 'sciatic (tibial)']), ...twigs(g.shoulder, g.elbow, p.stylopod.width, 2, 4, 2)],
   },
-  mature('E14.5', 0.3, false, false, [[30, 46], [40, 52], [50, 58], [62, 58]]),
+  mature('E14.5', 0.3, false, false, 4),
   mature('E15.5', 0.72, false, false),
   mature('E16.5', 0.98, false, false),
   mature('E17.5', 0.98, true, true),

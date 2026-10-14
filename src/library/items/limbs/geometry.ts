@@ -2,6 +2,12 @@
  * Parametric limb silhouette used to author the stage data. Pure maths, no DOM.
  * Frame: proximal left, distal right, anterior (digit 1) up; angles in degrees,
  * 0 = right, positive = clockwise on screen (down).
+ *
+ * Shapes follow the eMouseAtlas 3D models and Theiler plates (TS17 to TS26):
+ * buds are domes, the stylopod is a convex drumstick that tapers into the
+ * zeugopod, the plate flares from a narrow wrist/ankle to the digit bases,
+ * digits taper to the tip. Spec: docs/superpowers/specs/2026-10-14-drawing-styles-design.md
+ * ("Silhouette fidelity").
  */
 export type Pt = [number, number]
 
@@ -12,6 +18,10 @@ export const dir = (deg: number): Pt => [Math.cos(rad(deg)), Math.sin(rad(deg))]
 /** Unit normal on the anterior (upper) side of a direction. */
 export const normal = (d: Pt): Pt => [d[1], -d[0]]
 export const lerp = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
+const unit = (v: Pt): Pt => {
+  const l = Math.hypot(v[0], v[1]) || 1
+  return [v[0] / l, v[1] / l]
+}
 
 const f = (v: number): string => {
   const s = v.toFixed(1)
@@ -59,29 +69,51 @@ export function blob(c: Pt, rx: number, ry: number, angle = 0): string {
 export interface Segment {
   len: number
   angle: number
+  /** half-width at the segment's proximal end (the joints take the mean of the adjoining segments) */
   width: number
+  /** convexity: extra half-width at 45 % of the segment as a fraction of `width` (a drumstick thigh); 0 = straight sides */
+  bulge?: number
 }
 export interface Digit {
   /** angle relative to the autopod axis */
   angle: number
   len: number
+  /** half-width at the base */
   width: number
+  /** half-width at the tip as a fraction of `width` (default 1 = blunt, 0.55 = tapered) */
+  tip?: number
 }
 export interface LimbParams {
   shoulder: Pt
   stylopod: Segment
   zeugopod: Segment
-  /** palm: direction, distance from wrist to the digit bases, half-width at the wrist, spacing between digit bases, arc = proximal drop of the outer digits */
+  /**
+   * palm: direction, distance from wrist to the digit bases, half-width at the wrist, spacing between digit bases,
+   * arc = proximal drop of the digit bases, quadratic in the distance from the middle ray (k² · arc), so the bases lie on a round plate
+   */
   autopod: { angle: number; palm: number; width: number; spacing: number; arc?: number }
   digits: Digit[]
-  /** 0 = digits free to the base, 1 = solid plate */
+  /** fraction of the digit length that is webbed: 1 = solid plate, >= PLATE_WEB draws a scalloped plate, below it separate digits with clefts */
   web: number
+  /** half-width at the flank attachment (default: stylopod width) */
+  base?: number
+  /**
+   * profile of a bud (no digits): half-width at the base, maximum half-width and
+   * where along the bud (0 base, 1 apex) the maximum occurs; the tip is a quarter ellipse
+   */
+  bud?: { base: number; width: number; at: number }
 }
+/** From this webbing fraction the autopod is drawn as a plate with a scalloped margin rather than separate digits. */
+export const PLATE_WEB = 0.75
+
 export interface Ray {
   base: Pt
   tip: Pt
   dir: Pt
+  /** half-width at the base */
   width: number
+  /** half-width at the tip */
+  tipWidth: number
 }
 export interface LimbGeometry {
   outline: string
@@ -103,6 +135,34 @@ export interface LimbGeometry {
   bounds: [number, number, number, number]
 }
 
+/** Bud outline: a dome from the anterior flank point to the posterior one, widest at `bud.at`. */
+function budPoints(shoulder: Pt, apex: Pt, bud: { base: number; width: number; at: number }): { pts: Pt[]; margin: Pt[] } {
+  const u = unit([apex[0] - shoulder[0], apex[1] - shoulder[1]])
+  const n = normal(u)
+  const L = Math.hypot(apex[0] - shoulder[0], apex[1] - shoulder[1])
+  const at = Math.min(0.95, Math.max(0, bud.at))
+  const side = (sign: number): { p: Pt; s: number }[] => {
+    const out: { p: Pt; s: number }[] = []
+    const put = (s: number, w: number) => out.push({ p: add(add(shoulder, mul(u, s * L)), mul(n, sign * w)), s })
+    const baseSteps = at > 0 ? 3 : 0
+    for (let i = 0; i < baseSteps; i++) {
+      const s = (at * i) / baseSteps
+      put(s, bud.base + (bud.width - bud.base) * Math.sin((Math.PI / 2) * (s / at)))
+    }
+    // quarter ellipse from the widest point to the apex, sampled uniformly in angle
+    for (let i = 0; i < 6; i++) {
+      const th = ((Math.PI / 2) * i) / 6
+      put(at + (1 - at) * Math.sin(th), bud.width * Math.cos(th))
+    }
+    return out
+  }
+  const ant = side(1)
+  const post = side(-1).reverse()
+  const pts = [...ant.map((q) => q.p), apex, ...post.map((q) => q.p)]
+  const margin = [...ant.filter((q) => q.s >= 0.5).map((q) => q.p), apex, ...post.filter((q) => q.s >= 0.5).map((q) => q.p)]
+  return { pts, margin }
+}
+
 export function buildLimb(p: LimbParams): LimbGeometry {
   const sd = dir(p.stylopod.angle)
   const zd = dir(p.zeugopod.angle)
@@ -114,88 +174,110 @@ export function buildLimb(p: LimbParams): LimbGeometry {
   const sn = normal(sd)
   const zn = normal(zd)
   const an = normal(ad)
-  const jn = (a: Pt, b: Pt): Pt => {
-    const m = add(a, b)
-    const l = Math.hypot(m[0], m[1]) || 1
-    return mul(m, 1 / l)
-  }
+  const jn = (a: Pt, b: Pt): Pt => unit(add(a, b))
   const en = jn(sn, zn)
   const wn = jn(zn, an)
-  const upper: Pt[] = [
-    add(shoulder, mul(sn, p.stylopod.width)),
-    add(elbow, mul(en, (p.stylopod.width + p.zeugopod.width) / 2)),
-    add(wrist, mul(wn, (p.zeugopod.width + p.autopod.width) / 2)),
-  ]
-  const lower: Pt[] = [
-    add(wrist, mul(wn, -(p.zeugopod.width + p.autopod.width) / 2)),
-    add(elbow, mul(en, -(p.stylopod.width + p.zeugopod.width) / 2)),
-    add(shoulder, mul(sn, -p.stylopod.width)),
-  ]
+  const base = p.base ?? p.stylopod.width
+  const flank = { anterior: add(shoulder, mul(sn, base)), posterior: add(shoulder, mul(sn, -base)), inward: mul(sd, -1) }
   const mid = (p.digits.length - 1) / 2
   const rays: Ray[] = p.digits.map((dg, i) => {
     const d = dir(p.autopod.angle + dg.angle)
     const k = mid - i
-    const base = add(add(palm, mul(an, k * p.autopod.spacing)), mul(ad, -Math.abs(k) * (p.autopod.arc ?? 0)))
-    return { base, tip: add(base, mul(d, dg.len)), dir: d, width: dg.width }
+    const rayBase = add(add(palm, mul(an, k * p.autopod.spacing)), mul(ad, -k * k * (p.autopod.arc ?? 0)))
+    return { base: rayBase, tip: add(rayBase, mul(d, dg.len)), dir: d, width: dg.width, tipWidth: dg.width * (dg.tip ?? 1) }
   })
+  const finish = (pts: Pt[], margin: Pt[]): LimbGeometry => {
+    const xs = pts.map((q) => q[0])
+    const ys = pts.map((q) => q[1])
+    // the silhouette is the open spline round the limb closed by a straight cut along the flank
+    const open = smoothOpen(pts)
+    return {
+      bounds: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
+      outline: open + 'z',
+      outlineOpen: open,
+      flank,
+      margin: smoothOpen(margin),
+      shoulder,
+      elbow,
+      wrist,
+      palm,
+      stylopodDir: sd,
+      zeugopodDir: zd,
+      autopodDir: ad,
+      rays,
+    }
+  }
+
+  if (rays.length === 0) {
+    const bud = p.bud ?? { base, width: p.autopod.width, at: 0.4 }
+    const { pts, margin } = budPoints(shoulder, palm, bud)
+    return finish(pts, margin)
+  }
+
+  const sideOf = (sign: number, seg: Segment, from: Pt, to: Pt, nrm: Pt): Pt[] =>
+    seg.bulge ? [add(lerp(from, to, 0.45), mul(nrm, sign * seg.width * (1 + seg.bulge)))] : []
+  const upper: Pt[] = [
+    flank.anterior,
+    ...sideOf(1, p.stylopod, shoulder, elbow, sn),
+    add(elbow, mul(en, (p.stylopod.width + p.zeugopod.width) / 2)),
+    ...sideOf(1, p.zeugopod, elbow, wrist, zn),
+    add(wrist, mul(wn, (p.zeugopod.width + p.autopod.width) / 2)),
+  ]
+  const lower: Pt[] = [
+    add(wrist, mul(wn, -(p.zeugopod.width + p.autopod.width) / 2)),
+    ...sideOf(-1, p.zeugopod, elbow, wrist, zn),
+    add(elbow, mul(en, -(p.stylopod.width + p.zeugopod.width) / 2)),
+    ...sideOf(-1, p.stylopod, shoulder, elbow, sn),
+    flank.posterior,
+  ]
   const distal: Pt[] = []
   const margin: Pt[] = []
-  if (rays.length === 0) {
-    // bud or paddle: rounded tip
-    const r = p.autopod.width
-    const tipC = add(wrist, mul(ad, p.autopod.palm))
-    for (let i = 0; i <= 6; i++) {
-      const a = -90 + (180 * i) / 6
-      const d = dir(p.autopod.angle + a)
-      const pt = add(tipC, [d[0] * r * 0.55, d[1] * r])
-      distal.push(pt)
-      if (i >= 1 && i <= 5) margin.push(pt)
-    }
-  } else {
-    // palm corners: the plate flares from the wrist to the digit bases
-    const first = rays[0]!
-    const last = rays[rays.length - 1]!
-    const cornerA = add(add(first.base, mul(normal(first.dir), first.width * 1.1)), mul(ad, -p.autopod.palm * 0.3))
-    distal.push(lerp(upper[2]!, cornerA, 0.5), cornerA)
-    rays.forEach((r, i) => {
-      const n = normal(r.dir)
-      const w = r.width
-      const len = Math.hypot(r.tip[0] - r.base[0], r.tip[1] - r.base[1])
-      const tipR = add(r.base, mul(r.dir, len - w))
-      distal.push(add(tipR, mul(n, w)))
-      const apex = add(r.tip, mul(r.dir, w * 0.1))
+  // the plate fans out in a straight line from the wrist edge to the outer side of the outer digit's base,
+  // which continues into that digit's outer edge (the outer digits point outward at about the fan angle)
+  const first = rays[0]!
+  const last = rays[rays.length - 1]!
+  // (a scalloped plate is a disc: its flare bows outward instead)
+  const plate = p.web >= PLATE_WEB
+  const flare = (edge: Pt, ray: Ray, sign: number): Pt[] => {
+    const corner = add(add(ray.base, mul(normal(ray.dir), sign * ray.width * 0.9)), mul(ad, -p.autopod.palm * 0.08))
+    const mid = lerp(edge, corner, 0.5)
+    const chord = Math.hypot(corner[0] - edge[0], corner[1] - edge[1])
+    return [plate ? add(mid, mul(an, sign * chord * 0.12)) : mid, corner]
+  }
+  distal.push(...flare(upper[upper.length - 1]!, first, 1))
+  rays.forEach((r, i) => {
+    const n = normal(r.dir)
+    const len = Math.hypot(r.tip[0] - r.base[0], r.tip[1] - r.base[1])
+    const next = rays[i + 1]
+    const nextLen = next ? Math.hypot(next.tip[0] - next.base[0], next.tip[1] - next.base[1]) : len
+    if (plate) {
+      // scalloped plate: apexes and the clefts between them, no rounded tips
+      const apex = add(r.tip, mul(r.dir, r.tipWidth * 0.1))
       distal.push(apex)
       margin.push(apex)
-      distal.push(add(tipR, mul(n, -w)))
-      const next = rays[i + 1]
       if (next) {
         const m = lerp(r.base, next.base, 0.5)
-        const md = jn(r.dir, next.dir)
-        const depth = Math.min(len, Math.hypot(next.tip[0] - next.base[0], next.tip[1] - next.base[1])) * p.web
-        const webPt = add(m, mul(md, depth))
+        const webPt = add(m, mul(jn(r.dir, next.dir), Math.min(len, nextLen) * p.web))
         distal.push(webPt)
         margin.push(webPt)
       }
-    })
-    const cornerP = add(add(last.base, mul(normal(last.dir), -last.width * 1.1)), mul(ad, -p.autopod.palm * 0.3))
-    distal.push(cornerP, lerp(cornerP, lower[0]!, 0.5))
-  }
-  const pts = [...upper, ...distal, ...lower]
-  const xs = pts.map((q) => q[0])
-  const ys = pts.map((q) => q[1])
-  return {
-    bounds: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
-    outline: smoothClosed(pts),
-    outlineOpen: smoothOpen(pts),
-    flank: { anterior: upper[0]!, posterior: lower[2]!, inward: mul(sd, -1) },
-    margin: smoothOpen(margin),
-    shoulder,
-    elbow,
-    wrist,
-    palm,
-    stylopodDir: sd,
-    zeugopodDir: zd,
-    autopodDir: ad,
-    rays,
-  }
+      return
+    }
+    // separate digit: a rounded tip (never wider than the gap to the neighbour), then the cleft
+    const ws = Math.min(r.tipWidth, p.autopod.spacing * 0.42)
+    const tipR = add(r.base, mul(r.dir, len - ws))
+    const k = 0.71
+    const apex = add(tipR, mul(r.dir, ws * 1.05))
+    distal.push(add(tipR, mul(n, ws)), add(add(tipR, mul(r.dir, ws * k)), mul(n, ws * k)), apex, add(add(tipR, mul(r.dir, ws * k)), mul(n, -ws * k)), add(tipR, mul(n, -ws)))
+    margin.push(apex)
+    if (next) {
+      const m = lerp(r.base, next.base, 0.5)
+      const depth = Math.min(Math.min(len, nextLen) * p.web, Math.min(len, nextLen) - ws - 1)
+      const webPt = add(m, mul(jn(r.dir, next.dir), depth))
+      distal.push(webPt)
+      margin.push(webPt)
+    }
+  })
+  distal.push(...flare(lower[0]!, last, -1).reverse())
+  return finish([...upper, ...distal, ...lower], margin)
 }
