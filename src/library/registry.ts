@@ -5,6 +5,7 @@ import { items as instruments } from './items/instruments'
 import { items as cells } from './items/cells'
 import { items as tissues } from './items/tissues'
 import { items as species } from './items/species'
+import { items as development } from './items/development'
 import { items as molbio } from './items/molbio'
 import { items as analyses } from './items/analyses'
 import { items as composites } from './items/composites'
@@ -17,6 +18,7 @@ const ALL: LibraryItem[] = [
   ...instruments,
   ...tissues,
   ...species,
+  ...development,
   ...molbio,
   ...analyses,
 ]

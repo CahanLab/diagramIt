@@ -13,6 +13,8 @@ export type Category =
   | 'cells'
   | 'tissues'
   | 'species'
+  /** Mouse embryo and limb stage series (src/library/items/development.ts). */
+  | 'development'
   | 'molbio'
   | 'analyses'
   | 'composites'
@@ -46,6 +48,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   cells: 'Cells',
   tissues: 'Tissues & organs',
   species: 'Species',
+  development: 'Developmental stages',
   molbio: 'Molecular biology & omics',
   analyses: 'Analyses',
   composites: 'Composites',
@@ -59,6 +62,7 @@ export const CATEGORY_ORDER: Category[] = [
   'instruments',
   'tissues',
   'species',
+  'development',
   'molbio',
   'analyses',
 ]

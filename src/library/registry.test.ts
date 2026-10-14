@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { allItems, findItem, searchItems } from './registry'
 import { validateItem } from './validate'
 import { applyColors } from './color'
+import { CATEGORY_LABELS, CATEGORY_ORDER } from './types'
 
 describe('applyColors', () => {
   it('substitutes primary and secondary tokens case-insensitively', () => {
@@ -25,6 +26,10 @@ describe('library registry', () => {
   it('every item uses #PRIMARY somewhere so it is recolourable', () => {
     const missing = allItems().filter((i) => !/#primary\b/i.test(i.svg)).map((i) => i.id)
     expect(missing).toEqual([])
+  })
+  it('has a development category after species', () => {
+    expect(CATEGORY_ORDER.indexOf('development')).toBe(CATEGORY_ORDER.indexOf('species') + 1)
+    expect(CATEGORY_LABELS.development).toBe('Developmental stages')
   })
   it('findItem and searchItems work', () => {
     const first = allItems()[0]
