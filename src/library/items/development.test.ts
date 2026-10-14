@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { items, limbItems } from './development'
+import { embryoItems, items, limbItems } from './development'
 import { forelimb } from './limbs/forelimb'
 import { hindlimb } from './limbs/hindlimb'
 import { applyColors } from '../color'
@@ -42,5 +42,17 @@ describe('development limb items', () => {
     const fl = limbItems(forelimb).filter((i) => !/-(skeleton|muscle|nerves)$/.test(i.id))
     for (let k = 1; k < fl.length; k++) expect(fl[k]!.width).toBeGreaterThan(fl[k - 1]!.width)
     expect(limbItems(hindlimb).length).toBe(32)
+  })
+})
+
+describe('development embryo items', () => {
+  it('has nine embryos E10.5 to E18.5 with increasing default height', () => {
+    expect(embryoItems.map((i) => i.id)).toEqual(['e10-5', 'e11-5', 'e12-5', 'e13-5', 'e14-5', 'e15-5', 'e16-5', 'e17-5', 'e18-5'].map((s) => `development.mouse-embryo-${s}`))
+    for (let k = 1; k < embryoItems.length; k++) expect(embryoItems[k]!.height).toBeGreaterThan(embryoItems[k - 1]!.height)
+    expect(items.length).toBe(74)
+  })
+  it('is searchable by Theiler stage', () => {
+    expect(searchItems('ts17').map((i) => i.id)).toContain('development.mouse-embryo-e10-5')
+    expect(searchItems('theiler 26').map((i) => i.id)).toContain('development.mouse-embryo-e18-5')
   })
 })

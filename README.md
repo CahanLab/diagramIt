@@ -2,7 +2,7 @@
 
 A browser-based drawing app for publication- and grant-quality schematics of
 laboratory tasks, experimental designs and analyses. It ships with a library of
-~330 recolourable scientific icons (cells, consumables, tools, instruments,
+~400 recolourable scientific icons (cells, consumables, tools, instruments,
 tissues, species, molecular biology/omics, analyses) and a **differentiation
 timeline builder** for figures that show iPSCs being guided to a cell type by
 a series of media changes over time.

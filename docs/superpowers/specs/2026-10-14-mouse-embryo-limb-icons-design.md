@@ -98,6 +98,14 @@ Limb icons are composed, not hand-drawn, so the four versions of a stage
 share one outline and skeleton and so a correction to one element is made in
 one place.
 
+Implementation note (2026-10-14): rather than hand-authoring 18 outline
+paths, the outline, element capsules, tendon and nerve routes are derived from
+a parametric silhouette (`items/limbs/geometry.ts`: stylopod, zeugopod, palm,
+digit rays with base spacing, fan angle and web depth) through per-stage
+recipes (`items/limbs/build.ts`, `forelimb.ts`, `hindlimb.ts`). The exported
+`LimbStage[]` still matches the data model below, so the generator and tests
+are unchanged; a stage is corrected by editing its recipe parameters.
+
 ```
 src/library/items/limbs/stages.ts   pure data: LimbStage[] (18 entries)
 src/library/generators/limb.ts      pure: limbSvg(stage, version) -> string

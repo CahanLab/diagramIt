@@ -30,6 +30,22 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-14
+
+### Added
+
+- "Developmental stages" library category: mouse embryo icons for E10.5 to
+  E18.5 (Theiler stages 17 to 26, lateral view after the eMouseAtlas plates)
+  and mouse forelimb and hindlimb icons at the same nine stages. Each limb
+  comes as outline, skeleton (precartilaginous condensations, cartilage,
+  periosteal sleeves, ossifying diaphyses), muscle and tendon, and innervation
+  versions where that tissue exists at the stage: 9 embryos + 65 limbs = 74
+  icons. Limb icons are generated from a per-stage anatomy table
+  (`src/library/items/limbs/`) following Martin 1990 (*Int J Dev Biol*
+  34:323) and Rafipay et al. 2018 (*Dev Dyn* 247:1217); the hindlimb lags the
+  forelimb by half a day. Search by stage ("E13.5", "TS21") or tissue
+  ("alizarin", "neurofilament").
+
 ## [0.4.0] - 2026-10-07
 
 ### Added
