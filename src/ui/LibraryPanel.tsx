@@ -4,7 +4,7 @@ import { sceneCenter } from '../canvas/commands'
 import { useEditor } from '../canvas/editorStore'
 import { insertLibraryItem } from '../library/insert'
 import { itemsInCategory, searchItems } from '../library/registry'
-import { CATEGORY_LABELS, CATEGORY_ORDER, type Category, type LibraryItem } from '../library/types'
+import { CATEGORY_LABELS, CATEGORY_ORDER, DRAWING_STYLES, DRAWING_STYLE_LABELS, type Category, type LibraryItem } from '../library/types'
 import { useLibraries } from '../libraries/store'
 import { IconPreview } from './IconPreview'
 
@@ -14,6 +14,8 @@ export function LibraryPanel() {
   const canvas = useEditor((s) => s.canvas)
   const openDialog = useEditor((s) => s.openDialog)
   const setTool = useEditor((s) => s.setTool)
+  const drawingStyle = useEditor((s) => s.drawingStyle)
+  const setDrawingStyle = useEditor((s) => s.setDrawingStyle)
   const libraries = useLibraries((s) => s.libraries)
 
   const results = useMemo(() => (query.trim() ? searchItems(query) : null), [query, libraries])
@@ -21,9 +23,20 @@ export function LibraryPanel() {
   const insert = async (item: LibraryItem) => {
     if (!canvas) return
     const c = sceneCenter(canvas)
-    await insertLibraryItem(canvas, item, { x: c.x, y: c.y })
+    await insertLibraryItem(canvas, item, { x: c.x, y: c.y }, undefined, drawingStyle)
     setTool('select')
   }
+
+  const styleControl = (
+    <div className="lib-style" role="radiogroup" aria-label="Drawing style">
+      <span>Drawing style</span>
+      {DRAWING_STYLES.map((s) => (
+        <button key={s} type="button" role="radio" aria-checked={drawingStyle === s} className={drawingStyle === s ? 'on' : ''} onClick={() => setDrawingStyle(s)}>
+          {DRAWING_STYLE_LABELS[s]}
+        </button>
+      ))}
+    </div>
+  )
 
   const renderGrid = (items: LibraryItem[]) => (
     <div className="lib-grid">
@@ -39,7 +52,7 @@ export function LibraryPanel() {
           }}
           onClick={() => void insert(item)}
         >
-          <IconPreview item={item} />
+          <IconPreview item={item} style={drawingStyle} />
           <span className="label">{item.name}</span>
         </button>
       ))}
@@ -139,6 +152,7 @@ export function LibraryPanel() {
                     </span>
                     <span className="count">{items.length}</span>
                   </header>
+                  {isOpen && cat === 'development' && styleControl}
                   {isOpen && (items.length ? renderGrid(items) : <div className="lib-empty">Coming soon</div>)}
                 </section>
               )

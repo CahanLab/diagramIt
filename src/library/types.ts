@@ -21,6 +21,18 @@ export type Category =
   /** Items from user-made libraries (see src/libraries). Not shown as a built-in section. */
   | 'custom'
 
+/** Drawing style for developmental icons (spec: docs/superpowers/specs/2026-10-14-drawing-styles-design.md). */
+export type DrawingStyle = 'basic' | 'lucida' | 'realistic'
+export const DRAWING_STYLES: DrawingStyle[] = ['basic', 'lucida', 'realistic']
+export const DRAWING_STYLE_LABELS: Record<DrawingStyle, string> = { basic: 'Basic', lucida: 'Camera lucida', realistic: 'Realistic' }
+
+/** An alternative rendering of an item with its own default palette. */
+export interface StyledRendering {
+  svg: string
+  primary: string
+  secondary?: string
+}
+
 export interface LibraryItem {
   /** Unique, kebab-case, prefixed with category (e.g. `cells.ipsc-colony`) or, for custom items, with the library id. */
   id: string
@@ -38,6 +50,8 @@ export interface LibraryItem {
   primary: string
   /** Default colour substituted for #SECONDARY (if used). */
   secondary?: string
+  /** Alternative drawing styles (developmental icons). `svg`/`primary`/`secondary` above are the basic style. */
+  styles?: Partial<Record<DrawingStyle, StyledRendering>>
 }
 
 export const CATEGORY_LABELS: Record<Category, string> = {

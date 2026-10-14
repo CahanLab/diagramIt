@@ -5,6 +5,8 @@
  */
 import type { LibraryItem } from '../types'
 import { availableVersions, limbDefaultSize, limbSvg } from '../generators/limb'
+import { limbLucidaSvg } from '../generators/limbLucida'
+import { OUTLINE } from '../types'
 import type { LimbStage, LimbVersion, Stage } from './limbs/types'
 import { forelimb } from './limbs/forelimb'
 import { hindlimb } from './limbs/hindlimb'
@@ -51,6 +53,7 @@ export function limbItems(stages: LimbStage[]): LibraryItem[] {
         height: size.height,
         primary: PRIMARY,
         secondary: CARTILAGE,
+        styles: { lucida: { svg: limbLucidaSvg(s, v), primary: OUTLINE } },
       })
     }
   }

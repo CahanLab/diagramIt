@@ -72,6 +72,10 @@ button { cursor: pointer; }
 .lib-item .preview svg { max-width: 48px; max-height: 44px; }
 .lib-item .label { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.15; max-width: 62px; max-height: 23px; overflow: hidden; }
 .lib-empty { padding: 20px; color: var(--muted); text-align: center; }
+.lib-style { display: flex; align-items: center; gap: 4px; padding: 6px 10px 2px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+.lib-style span { margin-right: 4px; }
+.lib-style button { padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel); font-size: 11px; color: var(--text); }
+.lib-style button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .lib-special { display: grid; gap: 6px; padding: 8px; }
 .lib-special button { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); text-align: left; }
 .lib-special button:hover { background: var(--accent-soft); border-color: var(--accent); }

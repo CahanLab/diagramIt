@@ -40,6 +40,8 @@ export interface Muscle {
   name: string
   /** closed path, filled */
   path: string
+  /** when the block is an ellipse: centre, semi-axes and axis angle (degrees), used for hatching */
+  ellipse?: { c: [number, number]; rx: number; ry: number; angle: number }
 }
 export interface Tendon {
   name: string
@@ -62,11 +64,17 @@ export interface LimbStage {
   viewBox: string
   /** closed path of the limb silhouette */
   outline: string
+  /** the silhouette as an open path from the anterior flank point round the autopod to the posterior flank point */
+  outlineOpen: string
+  /** flank attachment points and the proximal direction into the body */
+  flank: { anterior: [number, number]; posterior: [number, number]; inward: [number, number] }
   /** open path along the distal margin while an apical ectodermal ridge is visible */
   aer?: string
   hairPlacodes?: [number, number][]
-  /** raw SVG fragments drawn over the outline (claws, footpads, wrinkles) */
+  /** raw SVG fragments drawn over the outline (claws, footpads, wrinkles), basic style */
   decor?: string
+  /** the same decorations drawn for the camera lucida style (ink only) */
+  decorLucida?: string
   elements: Element[]
   muscles: Muscle[]
   tendons: Tendon[]

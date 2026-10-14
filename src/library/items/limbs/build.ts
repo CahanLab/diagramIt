@@ -17,7 +17,7 @@ export interface Recipe {
   phalanges: (digit: 1 | 2 | 3 | 4 | 5) => ('proximal-phalanx' | 'middle-phalanx' | 'distal-phalanx')[]
   aer: boolean
   hairPlacodes?: [number, number][]
-  decor?: (g: LimbGeometry) => string
+  decor?: (g: LimbGeometry, style: 'basic' | 'lucida') => string
   muscles: (g: LimbGeometry, p: LimbParams) => Muscle[]
   tendons: (g: LimbGeometry, p: LimbParams) => Tendon[]
   nerves: (g: LimbGeometry, p: LimbParams) => Nerve[]
@@ -77,11 +77,12 @@ export function blocks(from: Pt, to: Pt, width: number, names: [string, string, 
   const len = Math.hypot(to[0] - from[0], to[1] - from[1])
   const angle = (Math.atan2(to[1] - from[1], to[0] - from[0]) * 180) / Math.PI
   const o = (k: number): Pt => mul(n, (k * width * spread) / l)
+  const mk = (name: string, c: Pt, rx: number, ry: number): Muscle => ({ name, path: blob(c, rx, ry, angle), ellipse: { c, rx, ry, angle } })
   return [
-    { name: names[0], path: blob(add(lerp(from, to, 0.3), o(1)), len * 0.22, width * 0.3, angle) },
-    { name: names[1], path: blob(add(lerp(from, to, 0.72), o(1)), len * 0.2, width * 0.28, angle) },
-    { name: names[2], path: blob(add(lerp(from, to, 0.3), o(-1)), len * 0.22, width * 0.3, angle) },
-    { name: names[3], path: blob(add(lerp(from, to, 0.72), o(-1)), len * 0.2, width * 0.28, angle) },
+    mk(names[0], add(lerp(from, to, 0.3), o(1)), len * 0.22, width * 0.3),
+    mk(names[1], add(lerp(from, to, 0.72), o(1)), len * 0.2, width * 0.28),
+    mk(names[2], add(lerp(from, to, 0.3), o(-1)), len * 0.22, width * 0.3),
+    mk(names[3], add(lerp(from, to, 0.72), o(-1)), len * 0.2, width * 0.28),
   ]
 }
 
@@ -92,10 +93,8 @@ export function masses(from: Pt, to: Pt, width: number, names: [string, string])
   const len = Math.hypot(to[0] - from[0], to[1] - from[1])
   const angle = (Math.atan2(to[1] - from[1], to[0] - from[0]) * 180) / Math.PI
   const c = lerp(from, to, 0.5)
-  return [
-    { name: names[0], path: blob(add(c, mul(n, (width * 0.42) / l)), len * 0.36, width * 0.3, angle) },
-    { name: names[1], path: blob(add(c, mul(n, (-width * 0.42) / l)), len * 0.36, width * 0.3, angle) },
-  ]
+  const mk = (name: string, cc: Pt): Muscle => ({ name, path: blob(cc, len * 0.36, width * 0.3, angle), ellipse: { c: cc, rx: len * 0.36, ry: width * 0.3, angle } })
+  return [mk(names[0], add(c, mul(n, (width * 0.42) / l))), mk(names[1], add(c, mul(n, (-width * 0.42) / l)))]
 }
 
 /** Tendon band from the distal zeugopod along each digit ray to a fraction of the digit length. */
@@ -186,6 +185,8 @@ export function assemble(rec: Recipe): LimbStage {
     lengthMm: rec.lengthMm,
     viewBox: `${vb[0]} ${vb[1]} ${vb[2]! - vb[0]!} ${vb[3]! - vb[1]!}`,
     outline: g.outline,
+    outlineOpen: g.outlineOpen,
+    flank: g.flank,
     elements,
     muscles: rec.muscles(g, p),
     tendons: rec.tendons(g, p),
@@ -193,31 +194,39 @@ export function assemble(rec: Recipe): LimbStage {
   }
   if (rec.aer) stage.aer = g.margin
   if (rec.hairPlacodes) stage.hairPlacodes = rec.hairPlacodes
-  if (rec.decor) stage.decor = rec.decor(g)
+  if (rec.decor) {
+    stage.decor = rec.decor(g, 'basic')
+    stage.decorLucida = rec.decor(g, 'lucida')
+  }
   return stage
 }
 
 /** Claw wedges at each digit tip. */
-export function claws(g: LimbGeometry): string {
+export function claws(g: LimbGeometry, style: 'basic' | 'lucida' = 'basic'): string {
   return g.rays
     .map((r) => {
       const n = normal(r.dir)
       const a = add(r.tip, mul(n, r.width * 0.5))
       const b = add(r.tip, mul(n, -r.width * 0.5))
       const t = add(r.tip, mul(r.dir, r.width * 1.6))
-      return `<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${t[0].toFixed(1)} ${t[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}z" fill="#4b5563" stroke-width="1"/>`
+      const d = `M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${t[0].toFixed(1)} ${t[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}z`
+      return style === 'basic' ? `<path d="${d}" fill="#4b5563" stroke-width="1"/>` : `<path d="${d}" fill="#ffffff" stroke-width="0.9"/>`
     })
     .join('')
 }
 
 /** Footpads at the digit bases and two skin wrinkles across the zeugopod. */
-export function padsAndWrinkles(g: LimbGeometry, p: LimbParams, pads: boolean, wrinkles: boolean): string {
+export function padsAndWrinkles(g: LimbGeometry, p: LimbParams, pads: boolean, wrinkles: boolean, style: 'basic' | 'lucida' = 'basic'): string {
   const parts: string[] = []
   if (pads) {
     ;[1, 2, 3].forEach((i) => {
       const r = g.rays[i]!
       const c = add(r.base, mul(r.dir, -p.autopod.palm * 0.3))
-      parts.push(`<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="2" fill="#1f2937" fill-opacity="0.18" stroke="none"/>`)
+      parts.push(
+        style === 'basic'
+          ? `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="2" fill="#1f2937" fill-opacity="0.18" stroke="none"/>`
+          : `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="1.8" stroke-width="0.7"/>`,
+      )
     })
   }
   if (wrinkles) {
@@ -226,7 +235,8 @@ export function padsAndWrinkles(g: LimbGeometry, p: LimbParams, pads: boolean, w
       const c = lerp(g.elbow, g.wrist, t)
       const a = add(c, mul(n, p.zeugopod.width * 0.7))
       const b = add(c, mul(n, -p.zeugopod.width * 0.7))
-      parts.push(`<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}Q${c[0].toFixed(1)} ${(c[1] + 1.5).toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}" stroke-width="1" stroke-opacity="0.5"/>`)
+      const d = `M${a[0].toFixed(1)} ${a[1].toFixed(1)}Q${c[0].toFixed(1)} ${(c[1] + 1.5).toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`
+      parts.push(style === 'basic' ? `<path d="${d}" stroke-width="1" stroke-opacity="0.5"/>` : `<path d="${d}" stroke-width="0.7"/>`)
     })
   }
   return parts.join('')

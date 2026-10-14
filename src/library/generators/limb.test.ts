@@ -10,6 +10,8 @@ const fixture: LimbStage = {
   lengthMm: 3,
   viewBox: '0 0 160 100',
   outline: 'M10 30h120v40H10z',
+  outlineOpen: 'M10 30h120v40H10',
+  flank: { anterior: [10, 30], posterior: [10, 70], inward: [-1, 0] },
   aer: 'M130 30v40',
   hairPlacodes: [[40, 40]],
   elements: [

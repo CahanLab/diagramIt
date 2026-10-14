@@ -3,9 +3,10 @@ import { FlipHorizontal2, FlipVertical2, LibraryBig, Lock, Unlock } from 'lucide
 import { useEffect, useState } from 'react'
 import { dataOf, flipSelection, setLocked } from '../canvas/commands'
 import { useEditor } from '../canvas/editorStore'
-import { iconDataOf, recolorIcon } from '../library/insert'
+import { iconDataOf, recolorIcon, restyleIcon } from '../library/insert'
+import { DRAWING_STYLES, DRAWING_STYLE_LABELS, type DrawingStyle } from '../library/types'
 import { selectionToSvg } from '../libraries/capture'
-import { findItem } from '../library/registry'
+import { findItem, renderingFor } from '../library/registry'
 import { ontogenyOf } from '../ontogeny/render'
 import { protocolOf } from '../protocol/render'
 import { ColorInput } from './ColorInput'
@@ -98,10 +99,32 @@ export function PropertiesPanel() {
         </div>
       )}
 
-      {iconData && (single instanceof Group ? single.getObjects().some((o) => dataOf(o)?.role) : true) && (
+      {iconData && single instanceof Group && findItem(iconData.libraryId ?? '')?.styles && (
+        <div className="row">
+          <label>Style</label>
+          <select
+            value={iconData.style ?? 'basic'}
+            onChange={(e) => {
+              const style = e.target.value as DrawingStyle
+              void restyleIcon(canvas, single, style).then((fresh) => {
+                if (!fresh) return
+                canvas.fire('object:modified', { target: fresh } as never)
+                useEditor.getState().setSelection([fresh])
+                useEditor.getState().bumpSelection()
+              })
+            }}
+          >
+            {DRAWING_STYLES.filter((s) => s === 'basic' || findItem(iconData.libraryId ?? '')?.styles?.[s]).map((s) => (
+              <option key={s} value={s}>{DRAWING_STYLE_LABELS[s]}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {iconData && (single instanceof Group ? single.getObjects().some((o) => dataOf(o)?.role || dataOf(o)?.strokeRole) : true) && (
         <>
           <div className="row"><label>Colour</label><ColorInput value={iconData.primaryColor ?? ''} onChange={(v) => apply((o) => recolorIcon(o, v, undefined))} /></div>
-          {findItem(iconData.libraryId ?? '')?.svg.match(/#secondary/i) && (
+          {renderingFor(findItem(iconData.libraryId ?? '') ?? { svg: '', primary: '', id: '', name: '', category: 'custom', keywords: [], width: 0, height: 0 }, iconData.style ?? 'basic').svg.match(/#secondary/i) && (
             <div className="row"><label>Accent</label><ColorInput value={iconData.secondaryColor ?? ''} onChange={(v) => apply((o) => recolorIcon(o, undefined, v))} /></div>
           )}
         </>

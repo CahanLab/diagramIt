@@ -1,4 +1,4 @@
-import type { Category, LibraryItem } from './types'
+import type { Category, DrawingStyle, LibraryItem, StyledRendering } from './types'
 import { items as consumables } from './items/consumables'
 import { items as tools } from './items/tools'
 import { items as instruments } from './items/instruments'
@@ -53,4 +53,13 @@ export function searchItems(query: string, category?: Category): LibraryItem[] {
     const hay = [item.name, item.id, ...item.keywords].join(' ').toLowerCase()
     return terms.every((t) => hay.includes(t))
   })
+}
+
+/** The item's rendering in a drawing style, falling back to the basic style for items without alternatives. */
+export function renderingFor(item: LibraryItem, style: DrawingStyle): StyledRendering {
+  const alt = item.styles?.[style]
+  if (alt) return alt
+  const basic: StyledRendering = { svg: item.svg, primary: item.primary }
+  if (item.secondary) basic.secondary = item.secondary
+  return basic
 }

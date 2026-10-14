@@ -4,13 +4,15 @@
  * Head to the left, dorsal side to the right, ventral side and limbs facing
  * left/down, tail curling under the belly. Silhouettes follow the eMouseAtlas
  * Theiler stage plates; limb morphology follows Martin (1990) Fig. 1 SEM series.
- * The body is one closed #PRIMARY path; limbs are separate #PRIMARY paths on
- * top so their outlines show; eye and ear use #SECONDARY.
+ *
+ * Each stage is an `EmbryoModel`: a list of tagged path parts that the style
+ * renderers in ./model.ts turn into the basic or camera lucida drawing. The
+ * body is one closed `body` part; limbs are separate `limb` parts on top so
+ * their outlines show; lens, eye and otic vesicle use #SECONDARY.
  */
 import type { LibraryItem } from '../../types'
-
-const wrap = (viewBox: string, body: string): string =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}"><g fill="none" stroke="#1f2937" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">${body}</g></svg>`
+import { EMBRYO_PALETTE, renderEmbryo } from './model'
+import type { EmbryoModel, EmbryoPart } from './model'
 
 type Pt = [number, number]
 const f = (v: number): string => (Math.round(v * 10) / 10).toString()
@@ -33,8 +35,13 @@ const spline = (pts: Pt[], close: boolean, t = 1): string => {
   return close ? d + 'Z' : d
 }
 
-const body = (pts: Pt[]): string => `<path d="${spline(pts, true)}" fill="#PRIMARY"/>`
-const stroke = (pts: Pt[], w = 2): string => `<path d="${spline(pts, false)}" stroke-width="${w}"/>`
+/** Closed body silhouette, filled #PRIMARY with the standard outline. */
+const body = (pts: Pt[]): EmbryoPart => ({ tag: 'body', d: spline(pts, true), draw: 'fill' })
+/** Open feature line (heart bulge, arches, nasal pit). */
+const line = (tag: EmbryoPart['tag'], pts: Pt[], w = 2): EmbryoPart => ({ tag, d: spline(pts, false), draw: 'stroke', w })
+/** Ellipse as two arcs, so every part is path data. */
+const ellipse = (cx: number, cy: number, rx: number, ry: number): string =>
+  `M${f(cx - rx)} ${f(cy)}a${f(rx)} ${f(ry)} 0 1 0 ${f(2 * rx)} 0a${f(rx)} ${f(ry)} 0 1 0 ${f(-2 * rx)} 0z`
 
 /** Cubic Bezier control points of closed-spline segment `i` (p1 -> p2). */
 const segment = (pts: Pt[], i: number, t = 1): [Pt, Pt, Pt, Pt] => {
@@ -57,7 +64,7 @@ const segment = (pts: Pt[], i: number, t = 1): [Pt, Pt, Pt, Pt] => {
  * segment parameters `from` and `to` (segment index + fraction), set `inset`
  * px inside the outline and `len` px long, pointing inward, as one path.
  */
-const somites = (pts: Pt[], from: number, to: number, n: number, inset: number, len: number): string => {
+const somites = (pts: Pt[], from: number, to: number, n: number, inset: number, len: number): EmbryoPart => {
   const parts: string[] = []
   for (let k = 0; k < n; k++) {
     const s = from + ((to - from) * k) / (n - 1)
@@ -75,7 +82,7 @@ const somites = (pts: Pt[], from: number, to: number, n: number, inset: number, 
     const ny = dx / l
     parts.push(`M${f(x + nx * inset)} ${f(y + ny * inset)}L${f(x + nx * (inset + len))} ${f(y + ny * (inset + len))}`)
   }
-  return `<path d="${parts.join('')}" stroke-width="1.5"/>`
+  return { tag: 'somites', d: parts.join(''), draw: 'stroke', w: 1.5 }
 }
 
 /** Point on a circle at angle `deg` (SVG orientation). */
@@ -89,7 +96,7 @@ const polar = (cx: number, cy: number, r: number, deg: number): Pt => {
  * the base points `b0` (posterior) and `b1` (anterior) tangent to the disc; the
  * distal edge between the tangent points carries `digits` scallops (0 = smooth).
  */
-const limbPlate = (b0: Pt, b1: Pt, c: Pt, r: number, digits: number): string => {
+const limbPlate = (b0: Pt, b1: Pt, c: Pt, r: number, digits: number): EmbryoPart => {
   const tangent = (bp: Pt, sign: number): number => {
     const d = Math.hypot(bp[0] - c[0], bp[1] - c[1])
     const phi = (Math.atan2(bp[1] - c[1], bp[0] - c[0]) * 180) / Math.PI
@@ -113,18 +120,19 @@ const limbPlate = (b0: Pt, b1: Pt, c: Pt, r: number, digits: number): string => 
     d += `A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${f(p1[0])} ${f(p1[1])}`
   }
   d += `L${f(b1[0])} ${f(b1[1])}Z`
-  return `<path d="${d}" fill="#PRIMARY" stroke-width="2"/>`
+  return { tag: 'limb', d, draw: 'fill', w: 2 }
 }
 
-/** Closed lens vesicle ring in #SECONDARY. */
-const lensRing = (cx: number, cy: number, r: number): string =>
-  `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffffff" stroke="#SECONDARY" stroke-width="2"/>`
-/** Pigmented eye. */
-const eyeDot = (cx: number, cy: number, r: number): string =>
-  `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#SECONDARY" stroke="none"/>`
-/** Otic vesicle. */
-const otic = (cx: number, cy: number, r: number): string =>
-  `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#SECONDARY" stroke="none" fill-opacity="0.55"/>`
+/** Rounded limb bud (early stages): an ellipse filled #PRIMARY. */
+const limbBud = (cx: number, cy: number, rx: number, ry: number): EmbryoPart => ({ tag: 'limb', d: ellipse(cx, cy, rx, ry), draw: 'fill', w: 2 })
+/** Umbilical loop / physiological hernia at the belly. */
+const hernia = (cx: number, cy: number, rx: number, ry: number): EmbryoPart => ({ tag: 'hernia', d: ellipse(cx, cy, rx, ry), draw: 'fill', w: 1.8 })
+/** Closed lens vesicle ring in #SECONDARY, white inside. */
+const lensRing = (cx: number, cy: number, r: number): EmbryoPart => ({ tag: 'lens', d: ellipse(cx, cy, r, r), draw: 'ring-secondary', w: 2 })
+/** Pigmented eye: solid #SECONDARY disc, no outline. */
+const eyeDot = (cx: number, cy: number, r: number): EmbryoPart => ({ tag: 'eye', d: ellipse(cx, cy, r, r), draw: 'fill-secondary', w: 0 })
+/** Otic vesicle: #SECONDARY disc, no outline. */
+const otic = (cx: number, cy: number, r: number): EmbryoPart => ({ tag: 'ear', d: ellipse(cx, cy, r, r), draw: 'fill-secondary', w: 0, opacity: 0.55 })
 
 const KEYWORDS = ['mouse', 'mus musculus', 'embryo', 'embryonic day', 'development', 'organogenesis']
 
@@ -158,21 +166,27 @@ const e105Body: Pt[] = [
   [28, 12],
 ]
 
-const e105 =
-  body(e105Body) +
-  somites(e105Body, 1.7, 8.3, 20, 3, 4) +
-  // heart bulge outlined on the ventral surface
-  stroke([[41, 45], [50, 48], [57, 55], [62, 63]]) +
-  // branchial arches 1 to 3 below and behind the eye
-  stroke([[33, 36], [34, 43], [38, 49]]) +
-  stroke([[40, 32], [41, 40], [45, 47]]) +
-  stroke([[47, 30], [47, 38], [50, 44]]) +
-  // forelimb bud (rounded dome) and hindlimb bud (small bump)
-  `<ellipse cx="73" cy="57" rx="6.5" ry="5.5" fill="#PRIMARY" stroke-width="2"/>` +
-  `<ellipse cx="69" cy="80" rx="4.5" ry="4" fill="#PRIMARY" stroke-width="2"/>` +
-  // lens pit: open ring
-  `<path d="M29.4 33.8A4 4 0 1 1 31.8 31.4" stroke="#SECONDARY" stroke-width="2"/>` +
-  otic(49, 23, 2.5)
+const e105: EmbryoModel = {
+  stage: 'E10.5',
+  theiler: 17,
+  viewBox: '0 0 100 100',
+  parts: [
+    body(e105Body),
+    somites(e105Body, 1.7, 8.3, 20, 3, 4),
+    // heart bulge outlined on the ventral surface
+    line('heart', [[41, 45], [50, 48], [57, 55], [62, 63]]),
+    // branchial arches 1 to 3 below and behind the eye
+    line('arches', [[33, 36], [34, 43], [38, 49]]),
+    line('arches', [[40, 32], [41, 40], [45, 47]]),
+    line('arches', [[47, 30], [47, 38], [50, 44]]),
+    // forelimb bud (rounded dome) and hindlimb bud (small bump)
+    limbBud(73, 57, 6.5, 5.5),
+    limbBud(69, 80, 4.5, 4),
+    // lens pit: open ring (a stroke, not a filled ring, so the body shows through the gap)
+    { tag: 'lens', d: 'M29.4 33.8A4 4 0 1 1 31.8 31.4', draw: 'stroke-secondary', w: 2 },
+    otic(49, 23, 2.5),
+  ],
+}
 
 /* ------------------------------------------------------------------ E11.5 */
 
@@ -206,24 +220,30 @@ const e115Body: Pt[] = [
   [28, 8],
 ]
 
-const e115 =
-  body(e115Body) +
-  somites(e115Body, 3.2, 8.6, 16, 3, 4) +
-  // heart bulge
-  stroke([[40, 50], [49, 52], [56, 58], [60, 66]]) +
-  // branchial arches (mandibular, hyoid)
-  stroke([[36, 40], [38, 48], [43, 53]]) +
-  stroke([[44, 36], [45, 44], [49, 51]]) +
-  // nasal pit
-  stroke([[19, 44], [21, 49], [26, 49]], 1.8) +
-  // umbilical loop at the belly
-  `<ellipse cx="60" cy="68" rx="3.5" ry="4" fill="#PRIMARY" stroke-width="1.8"/>` +
-  // forelimb paddle: flat handplate on a short stalk, pointing ventrally
-  limbPlate([76, 46], [67, 43], [70, 58], 8, 0) +
-  // hindlimb bud, rounded
-  `<ellipse cx="67" cy="79" rx="6.5" ry="6" fill="#PRIMARY" stroke-width="2"/>` +
-  lensRing(28, 36, 4.5) +
-  otic(52, 27, 3)
+const e115: EmbryoModel = {
+  stage: 'E11.5',
+  theiler: 19,
+  viewBox: '0 0 100 100',
+  parts: [
+    body(e115Body),
+    somites(e115Body, 3.2, 8.6, 16, 3, 4),
+    // heart bulge
+    line('heart', [[40, 50], [49, 52], [56, 58], [60, 66]]),
+    // branchial arches (mandibular, hyoid)
+    line('arches', [[36, 40], [38, 48], [43, 53]]),
+    line('arches', [[44, 36], [45, 44], [49, 51]]),
+    // nasal pit
+    line('nasal', [[19, 44], [21, 49], [26, 49]], 1.8),
+    // umbilical loop at the belly
+    hernia(60, 68, 3.5, 4),
+    // forelimb paddle: flat handplate on a short stalk, pointing ventrally
+    limbPlate([76, 46], [67, 43], [70, 58], 8, 0),
+    // hindlimb bud, rounded
+    limbBud(67, 79, 6.5, 6),
+    lensRing(28, 36, 4.5),
+    otic(52, 27, 3),
+  ],
+}
 
 /* ------------------------------------------------------------------ E12.5 */
 
@@ -257,33 +277,53 @@ const e125Body: Pt[] = [
   [26, 7],
 ]
 
-const e125 =
-  body(e125Body) +
-  somites(e125Body, 6, 8.6, 8, 3, 4) +
-  // heart bulge
-  stroke([[40, 50], [48, 52], [55, 58], [59, 66]]) +
-  // mandibular prominence under the eye and hyoid groove
-  stroke([[33, 43], [35, 51], [41, 56]]) +
-  stroke([[42, 39], [44, 47], [48, 53]]) +
-  // nasal pit
-  stroke([[18, 44], [20, 49], [25, 49]], 1.8) +
-  // umbilical hernia loop
-  `<ellipse cx="61" cy="72" rx="4.5" ry="5" fill="#PRIMARY" stroke-width="1.8"/>` +
-  // forelimb: handplate with five shallow scallops (digital rays) on a stalk
-  limbPlate([77, 47], [67, 43], [69, 60], 10.5, 5) +
-  // hindlimb: rounded footplate on a stalk
-  limbPlate([78, 80], [72, 72], [65, 85], 7, 0) +
-  eyeDot(27, 36, 4.5) +
-  // pinna anlage: crescent behind the eye
-  `<path d="M47 29c-3.5 2-4.5 7-1.5 10" stroke="#SECONDARY" stroke-width="2"/>`
+const e125: EmbryoModel = {
+  stage: 'E12.5',
+  theiler: 20,
+  viewBox: '0 0 100 100',
+  parts: [
+    body(e125Body),
+    somites(e125Body, 6, 8.6, 8, 3, 4),
+    // heart bulge
+    line('heart', [[40, 50], [48, 52], [55, 58], [59, 66]]),
+    // mandibular prominence under the eye and hyoid groove
+    line('arches', [[33, 43], [35, 51], [41, 56]]),
+    line('arches', [[42, 39], [44, 47], [48, 53]]),
+    // nasal pit
+    line('nasal', [[18, 44], [20, 49], [25, 49]], 1.8),
+    // umbilical hernia loop
+    hernia(61, 72, 4.5, 5),
+    // forelimb: handplate with five shallow scallops (digital rays) on a stalk
+    limbPlate([77, 47], [67, 43], [69, 60], 10.5, 5),
+    // hindlimb: rounded footplate on a stalk
+    limbPlate([78, 80], [72, 72], [65, 85], 7, 0),
+    eyeDot(27, 36, 4.5),
+    // pinna anlage: crescent behind the eye (an open line, so it stays a stroke)
+    { tag: 'ear', d: 'M47 29c-3.5 2-4.5 7-1.5 10', draw: 'stroke-secondary', w: 2 },
+  ],
+}
+
+export const models: EmbryoModel[] = [e105, e115, e125]
+
+const item = (model: EmbryoModel, id: string, name: string, keywords: string[], size: number): LibraryItem => ({
+  id,
+  name,
+  category: 'development',
+  keywords: [...KEYWORDS, ...keywords],
+  width: size,
+  height: size,
+  primary: EMBRYO_PALETTE.basic.primary,
+  secondary: EMBRYO_PALETTE.basic.secondary,
+  svg: renderEmbryo(model, 'basic'),
+  styles: { lucida: { svg: renderEmbryo(model, 'lucida'), ...EMBRYO_PALETTE.lucida } },
+})
 
 export const items: LibraryItem[] = [
-  {
-    id: 'development.mouse-embryo-e10-5',
-    name: 'Mouse embryo E10.5',
-    category: 'development',
-    keywords: [
-      ...KEYWORDS,
+  item(
+    e105,
+    'development.mouse-embryo-e10-5',
+    'Mouse embryo E10.5',
+    [
       'e10.5',
       '10.5 dpc',
       'ts17',
@@ -299,18 +339,13 @@ export const items: LibraryItem[] = [
       'otic vesicle',
       'tail bud',
     ],
-    width: 90,
-    height: 90,
-    primary: '#e8c9a0',
-    secondary: '#374151',
-    svg: wrap('0 0 100 100', e105),
-  },
-  {
-    id: 'development.mouse-embryo-e11-5',
-    name: 'Mouse embryo E11.5',
-    category: 'development',
-    keywords: [
-      ...KEYWORDS,
+    90,
+  ),
+  item(
+    e115,
+    'development.mouse-embryo-e11-5',
+    'Mouse embryo E11.5',
+    [
       'e11.5',
       '11.5 dpc',
       'ts19',
@@ -325,18 +360,13 @@ export const items: LibraryItem[] = [
       'nasal pit',
       'umbilical loop',
     ],
-    width: 97,
-    height: 97,
-    primary: '#e8c9a0',
-    secondary: '#374151',
-    svg: wrap('0 0 100 100', e115),
-  },
-  {
-    id: 'development.mouse-embryo-e12-5',
-    name: 'Mouse embryo E12.5',
-    category: 'development',
-    keywords: [
-      ...KEYWORDS,
+    97,
+  ),
+  item(
+    e125,
+    'development.mouse-embryo-e12-5',
+    'Mouse embryo E12.5',
+    [
       'e12.5',
       '12.5 dpc',
       'ts20',
@@ -350,10 +380,6 @@ export const items: LibraryItem[] = [
       'umbilical hernia',
       'mandibular prominence',
     ],
-    width: 105,
-    height: 105,
-    primary: '#e8c9a0',
-    secondary: '#374151',
-    svg: wrap('0 0 100 100', e125),
-  },
+    105,
+  ),
 ]

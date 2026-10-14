@@ -164,7 +164,7 @@ export function FabricCanvas() {
       const rect = el.getBoundingClientRect()
       const p = canvas.getScenePoint({ clientX: e.clientX, clientY: e.clientY } as MouseEvent)
       void rect
-      await insertLibraryItem(canvas, item, { x: p.x, y: p.y })
+      await insertLibraryItem(canvas, item, { x: p.x, y: p.y }, undefined, useEditor.getState().drawingStyle)
       store.setTool('select')
     }
     host.addEventListener('dragover', onDragOver)

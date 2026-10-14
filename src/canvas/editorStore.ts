@@ -4,6 +4,18 @@ import { DEFAULT_PAGE } from './page'
 import type { Ontogeny } from '../ontogeny/types'
 import type { Protocol } from '../protocol/types'
 import type { PageSpec, ToolId } from './types'
+import type { DrawingStyle } from '../library/types'
+
+const STYLE_KEY = 'diagramit.drawingStyle.v1'
+const STYLES: DrawingStyle[] = ['basic', 'lucida', 'realistic']
+function loadStyle(): DrawingStyle {
+  try {
+    const v = localStorage.getItem(STYLE_KEY)
+    return STYLES.includes(v as DrawingStyle) ? (v as DrawingStyle) : 'basic'
+  } catch {
+    return 'basic'
+  }
+}
 
 /** What File ▸ "Save selection as library item" and the editors' "Save as template" hand to the SaveEntryDialog. */
 export type SaveEntryRequest =
@@ -22,6 +34,8 @@ export interface EditorState {
   canUndo: boolean
   canRedo: boolean
   dirty: boolean
+  /** Drawing style used by the library panel for developmental icons; persisted in localStorage. */
+  drawingStyle: DrawingStyle
   /** Which modal dialog is open. */
   dialog:
     | null
@@ -43,6 +57,7 @@ export interface EditorState {
   setHistoryFlags: (canUndo: boolean, canRedo: boolean) => void
   markDirty: (dirty?: boolean) => void
   openDialog: (d: EditorState['dialog']) => void
+  setDrawingStyle: (s: DrawingStyle) => void
 }
 
 export const useEditor = create<EditorState>((set) => ({
@@ -55,8 +70,17 @@ export const useEditor = create<EditorState>((set) => ({
   canUndo: false,
   canRedo: false,
   dirty: false,
+  drawingStyle: loadStyle(),
   dialog: null,
   setCanvas: (canvas) => set({ canvas }),
+  setDrawingStyle: (drawingStyle) => {
+    try {
+      localStorage.setItem(STYLE_KEY, drawingStyle)
+    } catch {
+      /* private mode */
+    }
+    set({ drawingStyle })
+  },
   setTool: (tool) => set({ tool }),
   setPage: (page) => set({ page }),
   setZoom: (zoom) => set({ zoom }),

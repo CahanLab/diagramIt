@@ -85,6 +85,10 @@ export interface Ray {
 }
 export interface LimbGeometry {
   outline: string
+  /** same silhouette as an open path from the anterior flank point round the autopod to the posterior flank point */
+  outlineOpen: string
+  /** flank attachment points (anterior, posterior) and the proximal direction into the body */
+  flank: { anterior: Pt; posterior: Pt; inward: Pt }
   /** open path along the distal margin (for the AER) */
   margin: string
   shoulder: Pt
@@ -182,6 +186,8 @@ export function buildLimb(p: LimbParams): LimbGeometry {
   return {
     bounds: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
     outline: smoothClosed(pts),
+    outlineOpen: smoothOpen(pts),
+    flank: { anterior: upper[0]!, posterior: lower[2]!, inward: mul(sd, -1) },
     margin: smoothOpen(margin),
     shoulder,
     elbow,

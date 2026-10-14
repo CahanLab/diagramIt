@@ -103,7 +103,7 @@ const lumbricals = (g: Parameters<Recipe['muscles']>[0]) =>
 const mature = (stage: Stage, tendonTo: number, wrinkles: boolean, pads: boolean, hair?: [number, number][]): Recipe => ({
   limb: 'forelimb', stage, theiler: THEILER[stage], lengthMm: LENGTH_MM[stage], params: GEOMETRY[stage], state: stateAt(stage), phalanges, aer: false,
   hairPlacodes: hair,
-  decor: (g) => (stage >= 'E16.5' ? claws(g) : '') + padsAndWrinkles(g, GEOMETRY[stage], pads, wrinkles),
+  decor: (g, style) => (stage >= 'E16.5' ? claws(g, style) : '') + padsAndWrinkles(g, GEOMETRY[stage], pads, wrinkles, style),
   muscles: (g, p) => [...blocks(g.shoulder, g.elbow, p.stylopod.width, STYLO4), ...blocks(g.elbow, g.wrist, p.zeugopod.width, ZEUGO4), ...lumbricals(g)],
   tendons: (g) => digitTendons(g, tendonTo, 'extensor digitorum'),
   nerves: (g, p) => [...trunks(g, p, ['radial', 'median', 'ulnar']), ...digitalNerves(g, 0.95, 2), ...twigs(g.shoulder, g.elbow, p.stylopod.width, 2, 5, 1), ...twigs(g.elbow, g.wrist, p.zeugopod.width, 3, 5, 1)],

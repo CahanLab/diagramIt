@@ -1,3 +1,4 @@
+import type { DrawingStyle } from '../library/types'
 export type ObjectKind = 'shape' | 'text' | 'icon' | 'protocol' | 'ontogeny' | 'connector' | 'image' | 'group' | 'page'
 
 /** Custom data attached to every canvas object (serialised via toObject(['data'])). */
@@ -7,8 +8,12 @@ export interface ObjectData {
   libraryId?: string
   primaryColor?: string
   secondaryColor?: string
-  /** Role of a sub-path inside an icon group ('primary' | 'secondary'). */
+  /** Drawing style the icon was rendered in (developmental icons). */
+  style?: DrawingStyle
+  /** Role of a sub-path's fill inside an icon group ('primary' | 'secondary'). */
   role?: 'primary' | 'secondary'
+  /** Role of a sub-path's stroke inside an icon group (camera lucida ink is a stroke). */
+  strokeRole?: 'primary' | 'secondary'
   /** Serialised protocol for timeline groups. */
   protocol?: unknown
   /** Serialised { graph, view } for ontogeny groups. */

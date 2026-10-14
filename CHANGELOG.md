@@ -30,6 +30,27 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-14
+
+### Added
+
+- Drawing styles for the Developmental stages icons. A "Drawing style" control
+  at the top of the section picks Basic or Camera lucida (Realistic is listed
+  and currently falls back to Basic until it ships); thumbnails and insertion
+  follow it, and a selected developmental icon can be switched between styles
+  in the properties panel in place (same position and width, that style's
+  default colours). Camera lucida draws thin ink lines with white interiors,
+  the limb open at the flank, the skeleton as stipple whose density encodes
+  maturity, muscle as hatching, tendons as paired lines and nerves as solid
+  lines, after Grüneberg's *The Pathology of Development* (1963). Ink colour is
+  recolourable. Spec: `docs/superpowers/specs/2026-10-14-drawing-styles-design.md`.
+
+### Changed
+
+- Embryo icons are now built from a structural model (`items/embryos/model.ts`)
+  rendered per style; the basic drawings are unchanged apart from the otic
+  vesicle now drawn at reduced opacity as intended.
+
 ## [0.5.0] - 2026-10-14
 
 ### Added
