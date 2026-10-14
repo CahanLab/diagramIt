@@ -25,14 +25,19 @@ const n = (v: number): string => {
 const seg = (a: [number, number], b: [number, number]): string => `M${n(a[0])} ${n(a[1])}L${n(b[0])} ${n(b[1])}`
 
 /** Band across the mid-diaphysis covering the middle 40 % of the element. */
-function band(e: Element, colour: string): string {
+function band(e: Element, colour: string, outlined = false): string {
   const dx = e.d[0] - e.p[0]
   const dy = e.d[1] - e.p[1]
   const mx = (e.p[0] + e.d[0]) / 2
   const my = (e.p[1] + e.d[1]) / 2
   const a: [number, number] = [mx - dx * 0.2, my - dy * 0.2]
   const b: [number, number] = [mx + dx * 0.2, my + dy * 0.2]
-  return `<path d="${seg(a, b)}" stroke="${colour}" stroke-width="${n(e.r * 2)}" stroke-linecap="butt"/>`
+  const fill = `<path d="${seg(a, b)}" stroke="${colour}" stroke-width="${n(e.r * 2)}" stroke-linecap="butt"/>`
+  if (!outlined) return fill
+  const nx = -(e.d[1] - e.p[1]) / (Math.hypot(dx, dy) || 1)
+  const ny = (e.d[0] - e.p[0]) / (Math.hypot(dx, dy) || 1)
+  const edge = (s: number): string => seg([a[0] + nx * e.r * s, a[1] + ny * e.r * s], [b[0] + nx * e.r * s, b[1] + ny * e.r * s])
+  return `${fill}<path d="${edge(1)}${edge(-1)}" stroke-width="1"/>`
 }
 
 function element(e: Element): string {
@@ -45,7 +50,7 @@ function element(e: Element): string {
     `<path d="${line}" stroke-width="${n(e.r * 2 + 2.5)}"/>`,
     `<path d="${line}" stroke="#SECONDARY" stroke-width="${n(e.r * 2)}"/>`,
   ]
-  if (e.state === 'sleeve') parts.push(band(e, LIMB_COLORS.sleeve))
+  if (e.state === 'sleeve') parts.push(band(e, LIMB_COLORS.sleeve, true))
   if (e.state === 'ossifying') parts.push(band(e, LIMB_COLORS.ossifying))
   return `<g class="${cls}">${parts.join('')}</g>`
 }
