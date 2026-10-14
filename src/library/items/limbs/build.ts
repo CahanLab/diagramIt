@@ -187,6 +187,7 @@ export function assemble(rec: Recipe): LimbStage {
     outline: g.outline,
     outlineOpen: g.outlineOpen,
     flank: g.flank,
+    landmarks: { shoulder: g.shoulder, elbow: g.elbow, wrist: g.wrist, stylopodWidth: p.stylopod.width, zeugopodWidth: p.zeugopod.width },
     elements,
     muscles: rec.muscles(g, p),
     tendons: rec.tendons(g, p),

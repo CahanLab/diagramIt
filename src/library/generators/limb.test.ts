@@ -12,6 +12,7 @@ const fixture: LimbStage = {
   outline: 'M10 30h120v40H10z',
   outlineOpen: 'M10 30h120v40H10',
   flank: { anterior: [10, 30], posterior: [10, 70], inward: [-1, 0] },
+  landmarks: { shoulder: [10, 50], elbow: [50, 52], wrist: [92, 50], stylopodWidth: 12, zeugopodWidth: 10 },
   aer: 'M130 30v40',
   hairPlacodes: [[40, 40]],
   elements: [

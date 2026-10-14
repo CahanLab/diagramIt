@@ -1,8 +1,26 @@
-import { Canvas, Color, FabricObject, Group, loadSVGFromString } from 'fabric'
+import { Canvas, Color, FabricObject, Gradient, Group, loadSVGFromString } from 'fabric'
 import type { ObjectData } from '../canvas/types'
-import { applyColors, PRIMARY_SENTINEL, SECONDARY_SENTINEL } from './color'
+import { applySentinels, colorFor, roleOfSentinel, type ColorRole, type ColorVariant } from './color'
 import type { DrawingStyle, LibraryItem } from './types'
 import { findItem, renderingFor } from './registry'
+
+type StopRole = { role: ColorRole; variant: ColorVariant } | null
+type AnyGradient = Gradient<'linear'> | Gradient<'radial'>
+
+/** Which gradient stops carry a sentinel colour. */
+function tagStops(g: AnyGradient): StopRole[] {
+  return g.colorStops.map((s) => {
+    const h = hexOf(s.color)
+    return h ? roleOfSentinel(h) : null
+  })
+}
+
+function paintStops(g: AnyGradient, stops: StopRole[], primary: string, secondary: string): void {
+  g.colorStops = g.colorStops.map((s, i) => {
+    const r = stops[i]
+    return r ? { ...s, color: colorFor(r.role, r.variant, primary, secondary) } : s
+  })
+}
 
 function hexOf(fill: unknown): string | null {
   if (typeof fill !== 'string' || !fill) return null
@@ -21,27 +39,31 @@ export async function buildIconGroup(item: LibraryItem, colors?: { primary?: str
   const rendering = renderingFor(item, style)
   const primary = colors?.primary ?? rendering.primary
   const secondary = colors?.secondary ?? rendering.secondary ?? primary
-  const svg = applyColors(rendering.svg, PRIMARY_SENTINEL, SECONDARY_SENTINEL)
+  const svg = applySentinels(rendering.svg)
   const { objects, options } = await loadSVGFromString(svg)
   const parts = objects.filter((o): o is FabricObject => !!o)
   if (parts.length === 0) throw new Error(`Icon "${item.id}" produced no drawable elements`)
   for (const o of parts) {
-    const fill = hexOf(o.fill)
-    const stroke = hexOf(o.stroke)
     const data: ObjectData = { kind: 'shape' }
-    if (fill === PRIMARY_SENTINEL) {
-      data.role = 'primary'
-      o.set('fill', primary)
-    } else if (fill === SECONDARY_SENTINEL) {
-      data.role = 'secondary'
-      o.set('fill', secondary)
+    const fill = hexOf(o.fill)
+    const fr = fill ? roleOfSentinel(fill) : null
+    if (fr) {
+      data.role = fr.role
+      data.roleVariant = fr.variant
+      o.set('fill', colorFor(fr.role, fr.variant, primary, secondary))
+    } else if (o.fill instanceof Gradient) {
+      const stops = tagStops(o.fill)
+      if (stops.some(Boolean)) {
+        data.stops = stops
+        paintStops(o.fill, stops, primary, secondary)
+      }
     }
-    if (stroke === PRIMARY_SENTINEL) {
-      data.strokeRole = 'primary'
-      o.set('stroke', primary)
-    } else if (stroke === SECONDARY_SENTINEL) {
-      data.strokeRole = 'secondary'
-      o.set('stroke', secondary)
+    const stroke = hexOf(o.stroke)
+    const sr = stroke ? roleOfSentinel(stroke) : null
+    if (sr) {
+      data.strokeRole = sr.role
+      data.strokeVariant = sr.variant
+      o.set('stroke', colorFor(sr.role, sr.variant, primary, secondary))
     }
     o.set('data', data)
     o.set({ selectable: false, evented: false, strokeUniform: false })
@@ -84,12 +106,16 @@ export async function insertLibraryItem(
 export function recolorIcon(obj: FabricObject, primary?: string, secondary?: string): void {
   if (!(obj instanceof Group)) return
   const data = (obj.get('data') as ObjectData | undefined) ?? { kind: 'icon' }
+  const p = primary ?? data.primaryColor ?? '#000000'
+  const s = secondary ?? data.secondaryColor ?? p
   const walk = (o: FabricObject) => {
     const d = o.get('data') as ObjectData | undefined
-    if (d?.role === 'primary' && primary) o.set('fill', primary)
-    if (d?.role === 'secondary' && secondary) o.set('fill', secondary)
-    if (d?.strokeRole === 'primary' && primary) o.set('stroke', primary)
-    if (d?.strokeRole === 'secondary' && secondary) o.set('stroke', secondary)
+    if (d?.role && ((d.role === 'primary' && primary) || (d.role === 'secondary' && secondary))) o.set('fill', colorFor(d.role, d.roleVariant ?? 'base', p, s))
+    if (d?.strokeRole && ((d.strokeRole === 'primary' && primary) || (d.strokeRole === 'secondary' && secondary))) o.set('stroke', colorFor(d.strokeRole, d.strokeVariant ?? 'base', p, s))
+    if (d?.stops && o.fill instanceof Gradient) {
+      paintStops(o.fill, d.stops as StopRole[], p, s)
+      o.set('dirty', true)
+    }
     if (o instanceof Group) o.getObjects().forEach(walk)
   }
   obj.getObjects().forEach(walk)

@@ -147,7 +147,7 @@ const item = (model: EmbryoModel, meta: ReturnType<typeof base>, width: number, 
   height,
   svg: renderEmbryo(model, 'basic'),
   ...EMBRYO_PALETTE.basic,
-  styles: { lucida: { svg: renderEmbryo(model, 'lucida'), ...EMBRYO_PALETTE.lucida } },
+  styles: { lucida: { svg: renderEmbryo(model, 'lucida'), ...EMBRYO_PALETTE.lucida }, realistic: { svg: renderEmbryo(model, 'realistic'), ...EMBRYO_PALETTE.realistic } },
 })
 
 export const items: LibraryItem[] = [

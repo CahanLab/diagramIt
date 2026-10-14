@@ -70,7 +70,10 @@ re-opens the editor and `replace*Group` re-renders in place.
   on objects we position. Raster export must run with guides detached
   (`withoutGuides`). `fabric/extensions` needs the `westures` package.
 - Icons: inline SVG strings, viewBox only, allowed elements listed in
-  `src/library/types.ts`, recolourable regions use `#PRIMARY`/`#SECONDARY`.
+  `src/library/types.ts` (gradients in `<defs>` referenced by `url(#id)` are
+  allowed; ids must be unique per icon), recolourable regions use
+  `#PRIMARY`/`#SECONDARY` and the tint tokens `#PRIMARYL`/`#PRIMARYD`/
+  `#SECONDARYL`/`#SECONDARYD` (`src/library/color.ts`).
   The registry test validates every icon; use the icon-sheet script to eyeball.
 - Ontogeny graphs: rules in `src/ontogeny/graphs/README.md`; the graphs test
   validates structure. Curated content was authored by subagents from
@@ -101,3 +104,9 @@ re-opens the editor and `replace*Group` re-renders in place.
 - PDF export not visually verified (no rasteriser installed on this machine).
 - Limb icons show dorsal views only; no scapula/pelvis, no vessel version
   (the stage data model can take a `vessels` array later).
+- Realistic embryos have no liver/organ parts beyond the heart; the embryo
+  models would need `liver` parts for E10.5 to E13.5.
+- Custom-library SVG sanitiser rejects gradients, so a realistic icon cannot be
+  saved as a custom library item.
+- PyMuPDF cannot rasterise gradient fills; use `qlmanage -s <max dim>` (or the
+  browser) to check realistic icons.

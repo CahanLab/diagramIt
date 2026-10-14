@@ -191,5 +191,6 @@ export const items: LibraryItem[] = meta.map((m, i) => ({
   secondary: EMBRYO_PALETTE.basic.secondary,
   styles: {
     lucida: { svg: renderEmbryo(models[i]!, 'lucida'), ...EMBRYO_PALETTE.lucida },
+    realistic: { svg: renderEmbryo(models[i]!, 'realistic'), ...EMBRYO_PALETTE.realistic },
   },
 }))

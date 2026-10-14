@@ -30,6 +30,28 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-14
+
+### Added
+
+- Realistic drawing style for the Developmental stages icons: gradient-shaded
+  translucent tissue with a dark rim, specular sheen and a soft drop shadow;
+  precartilaginous condensations as soft glows, cartilage as translucent
+  rods with an axial highlight, periosteal sleeves and ossifying diaphyses as
+  bone and Alizarin bands, muscle with sheen, pearly tendons, nerves with a
+  dark core; embryos with a glossy eye, the heart showing through the body
+  wall at E10.5 to E12.5 and shaded limbs. Recolouring works on gradients:
+  the lighter and darker tints follow the chosen colour.
+
+### Changed
+
+- Icon contract: icons may now define linear and radial gradients in
+  `<defs>` and reference them with `url(#id)`; tint tokens `#PRIMARYL`,
+  `#PRIMARYD`, `#SECONDARYL`, `#SECONDARYD` give derived shades
+  (`src/library/color.ts`). User-imported custom-library SVGs are still
+  sanitised without gradients, so "Save selection as library item" does not
+  accept a realistic-style icon yet.
+
 ## [0.6.0] - 2026-10-14
 
 ### Added

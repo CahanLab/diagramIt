@@ -1,6 +1,6 @@
 import type { LibraryItem } from './types'
 
-const ALLOWED = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'title'])
+const ALLOWED = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'title', 'defs', 'linearGradient', 'radialGradient', 'stop'])
 
 /** Returns a list of problems with an item (empty when valid). Needs a DOM (jsdom in tests, browser at runtime). */
 export function validateItem(item: LibraryItem): string[] {
@@ -21,6 +21,11 @@ export function validateItem(item: LibraryItem): string[] {
   for (const el of Array.from(all)) {
     if (!ALLOWED.has(el.tagName)) problems.push(`${item.id}: element <${el.tagName}> not allowed`)
   }
-  if (item.svg.includes('url(')) problems.push(`${item.id}: url() references not allowed`)
+  // url() may only reference a gradient defined in this icon.
+  const ids = new Set(Array.from(root.querySelectorAll('linearGradient, radialGradient')).map((g) => g.getAttribute('id') ?? ''))
+  for (const m of item.svg.matchAll(/url\(([^)]*)\)/g)) {
+    const ref = m[1]!.trim().replace(/^['"]|['"]$/g, '')
+    if (!ref.startsWith('#') || !ids.has(ref.slice(1))) problems.push(`${item.id}: url(${ref}) must reference a gradient defined in the icon`)
+  }
   return problems
 }

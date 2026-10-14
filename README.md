@@ -73,7 +73,11 @@ local storage. Projects are saved as `.diagramit.json` files.
 
 - **Library** (left): search or browse categories; click to insert at the
   centre of the view or drag onto the canvas. Icons are vector and their
-  primary/accent colours can be changed in the properties panel.
+  primary/accent colours can be changed in the properties panel. The
+  Developmental stages section (mouse embryos E10.5 to E18.5, fore- and
+  hindlimbs with skeleton, muscle/tendon and innervation versions) has a
+  drawing-style switch: basic, camera lucida or realistic; a placed icon can
+  be switched between styles in the properties panel.
 - **Parametric objects**: well plates (6–384 wells, optionally highlighting
   wells), overlapping cell clusters (count, colours, nuclei), Petri dishes with
   colonies (top or side view).

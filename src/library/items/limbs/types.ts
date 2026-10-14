@@ -68,6 +68,8 @@ export interface LimbStage {
   outlineOpen: string
   /** flank attachment points and the proximal direction into the body */
   flank: { anterior: [number, number]; posterior: [number, number]; inward: [number, number] }
+  /** joint landmarks and segment half-widths (for shading) */
+  landmarks: { shoulder: [number, number]; elbow: [number, number]; wrist: [number, number]; stylopodWidth: number; zeugopodWidth: number }
   /** open path along the distal margin while an apical ectodermal ridge is visible */
   aer?: string
   hairPlacodes?: [number, number][]

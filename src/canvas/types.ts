@@ -12,8 +12,13 @@ export interface ObjectData {
   style?: DrawingStyle
   /** Role of a sub-path's fill inside an icon group ('primary' | 'secondary'). */
   role?: 'primary' | 'secondary'
+  /** Tint variant of the fill role (shaded icons use lighter/darker derivatives). */
+  roleVariant?: 'base' | 'light' | 'dark'
   /** Role of a sub-path's stroke inside an icon group (camera lucida ink is a stroke). */
   strokeRole?: 'primary' | 'secondary'
+  strokeVariant?: 'base' | 'light' | 'dark'
+  /** For gradient fills: role/variant per colour stop (null = fixed colour). */
+  stops?: ({ role: 'primary' | 'secondary'; variant: 'base' | 'light' | 'dark' } | null)[]
   /** Serialised protocol for timeline groups. */
   protocol?: unknown
   /** Serialised { graph, view } for ontogeny groups. */

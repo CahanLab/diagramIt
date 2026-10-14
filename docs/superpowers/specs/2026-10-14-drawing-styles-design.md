@@ -123,6 +123,20 @@ names, keywords and search are unchanged; the library count stays 74.
 - Realistic (phase 2): validator accepts gradients only with prefixed ids;
   recolouring a gradient-filled icon changes every stop that carried a token.
 
+## Implementation notes (2026-10-14)
+
+- Tint tokens are `#PRIMARYL`/`#PRIMARYD`/`#SECONDARYL`/`#SECONDARYD` (no
+  hyphen, so the `\b` token regexes stay unambiguous). Each role/variant pair
+  has its own sentinel colour at insert time; Fabric gradient stops that carry
+  a sentinel are recorded in `data.stops` and repainted by `recolorIcon`.
+- Gradient ids: `rl-<f|h>-e<day>-5-<version>-body` for limbs,
+  `re-e<day>-5-body` for embryos; `objectBoundingBox` units, so every filled
+  part (body, hand, foot, hernia) gets its own radial shading.
+- The custom-library sanitiser still rejects gradients; saving a realistic
+  icon into a custom library is a known gap.
+- PyMuPDF does not render gradient fills; realistic sheets are checked with
+  `qlmanage -s <max dimension>`.
+
 ## Out of scope
 
 - Styles for icons outside the Developmental stages category.

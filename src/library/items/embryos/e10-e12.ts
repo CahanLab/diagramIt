@@ -315,7 +315,7 @@ const item = (model: EmbryoModel, id: string, name: string, keywords: string[], 
   primary: EMBRYO_PALETTE.basic.primary,
   secondary: EMBRYO_PALETTE.basic.secondary,
   svg: renderEmbryo(model, 'basic'),
-  styles: { lucida: { svg: renderEmbryo(model, 'lucida'), ...EMBRYO_PALETTE.lucida } },
+  styles: { lucida: { svg: renderEmbryo(model, 'lucida'), ...EMBRYO_PALETTE.lucida }, realistic: { svg: renderEmbryo(model, 'realistic'), ...EMBRYO_PALETTE.realistic } },
 })
 
 export const items: LibraryItem[] = [

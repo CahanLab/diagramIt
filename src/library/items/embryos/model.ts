@@ -118,15 +118,84 @@ function lucidaPart(p: EmbryoPart): string {
   }
 }
 
+/** Centre and radius when the path is the two-arc circle emitted by the embryo helpers. */
+function circleOf(d: string): { cx: number; cy: number; r: number } | null {
+  const m = /^M(-?[\d.]+) (-?[\d.]+)a(-?[\d.]+) (-?[\d.]+) 0 1 0 (-?[\d.]+) 0/i.exec(d.trim())
+  if (!m) return null
+  const x0 = Number(m[1])
+  const y0 = Number(m[2])
+  const rx = Number(m[3])
+  const ry = Number(m[4])
+  if (Math.abs(rx - ry) > 0.01) return null
+  return { cx: x0 + rx, cy: y0, r: rx }
+}
+
+/** Realistic: gradient-shaded tissue with a soft shadow, organs showing through, glossy eye. */
+function realisticPart(p: EmbryoPart, gradientId: string): string {
+  const w = p.w
+  switch (p.draw) {
+    case 'fill': {
+      if (p.tag === 'body') {
+        return (
+          `<path d="${p.d}" fill="#000000" fill-opacity="0.1" stroke="none" transform="translate(1.5 2.5)"/>` +
+          `<path d="${p.d}" fill="url(#${gradientId})" stroke="#PRIMARYD" stroke-width="0.9" stroke-opacity="0.7"/>`
+        )
+      }
+      if (p.tag === 'hernia') return `<path d="${p.d}" fill="url(#${gradientId})" stroke="#PRIMARYD" stroke-width="0.7" stroke-opacity="0.6"/>`
+      return `<path d="${p.d}" fill="url(#${gradientId})" stroke="#PRIMARYD" stroke-width="0.8" stroke-opacity="0.7"/>`
+    }
+    case 'sausage': {
+      const ww = w ?? 10
+      return (
+        `<path d="${p.d}" stroke="#PRIMARYD" stroke-width="${ww}" stroke-opacity="0.85"/>` +
+        `<path d="${p.d}" stroke="#PRIMARY" stroke-width="${ww - 2.4}"/>` +
+        `<path d="${p.d}" stroke="#PRIMARYL" stroke-width="${Math.max(0.8, (ww - 5) * 0.4)}" stroke-opacity="0.55"/>`
+      )
+    }
+    case 'stroke':
+      if (p.tag === 'heart') return `<path d="${p.d}" fill="#c0392b" fill-opacity="0.2" stroke="#c0392b" stroke-width="1.1" stroke-opacity="0.35"/>`
+      if (p.tag === 'somites') return `<path d="${p.d}" stroke="#PRIMARYD" stroke-width="1.1" stroke-opacity="0.5"/>`
+      if (p.tag === 'whiskers') return `<path d="${p.d}" stroke="#1f2937" stroke-width="0.7" stroke-opacity="0.7"/>`
+      if (p.tag === 'hand' || p.tag === 'foot') return `<path d="${p.d}" stroke="#PRIMARYD" stroke-width="${w ?? 2}" stroke-opacity="0.75"/>`
+      return `<path d="${p.d}" stroke="#PRIMARYD" stroke-width="${Math.max(0.7, (w ?? 2.5) * 0.45)}" stroke-opacity="0.6"/>`
+    case 'stroke-secondary':
+      return `<path d="${p.d}" stroke="#SECONDARYD" stroke-width="${Math.max(0.7, (w ?? 2.5) * 0.6)}" stroke-opacity="0.8"/>`
+    case 'stroke-white':
+      return `<path d="${p.d}" stroke="#ffffff" stroke-width="${w ?? 1.5}" stroke-opacity="0.9"/>`
+    case 'dots':
+      return `<path d="${p.d}" stroke="#PRIMARYD" stroke-width="${(w ?? 2) * 0.9}" stroke-opacity="0.6" stroke-linecap="round"/>`
+    case 'fill-secondary': {
+      if (p.tag === 'eye') {
+        const c = circleOf(p.d)
+        const gloss = c ? `<circle cx="${(c.cx - c.r * 0.3).toFixed(1)}" cy="${(c.cy - c.r * 0.3).toFixed(1)}" r="${(c.r * 0.32).toFixed(1)}" fill="#ffffff" fill-opacity="0.85" stroke="none"/>` : ''
+        return `<path d="${p.d}" fill="#SECONDARY" stroke="#SECONDARYD" stroke-width="0.6"/>${gloss}`
+      }
+      return `<path d="${p.d}" fill="#SECONDARY" fill-opacity="${p.opacity ?? 0.6}" stroke="#PRIMARYD" stroke-width="0.6" stroke-opacity="0.6"/>`
+    }
+    case 'ring-secondary':
+      return `<path d="${p.d}" fill="#ffffff" fill-opacity="0.7" stroke="#SECONDARY" stroke-width="1.2"/>`
+    case 'fill-white':
+      return `<path d="${p.d}" fill="#ffffff" stroke="#PRIMARYD" stroke-width="0.7" stroke-opacity="0.7"/>`
+    case 'fill-dark':
+      return `<path d="${p.d}" fill="#374151" stroke="#1f2937" stroke-width="0.5"/>`
+  }
+}
+
 export function renderEmbryo(model: EmbryoModel, style: DrawingStyle): string {
   switch (style) {
     case 'basic':
       return wrapSvg(model.viewBox, 2.5, model.parts.map((p) => withTransform(p, basicPart(p))).join(''))
     case 'lucida':
       return wrapSvg(model.viewBox, LUCIDA.outline, model.parts.map((p) => withTransform(p, lucidaPart(p))).join('')).replace(`stroke="${OUTLINE}"`, 'stroke="#PRIMARY"')
-    case 'realistic':
-      // Phase 2 of the spec; until then the basic drawing stands in.
-      return renderEmbryo(model, 'basic')
+    case 'realistic': {
+      const gid = `re-${model.stage.toLowerCase().replace('.', '-')}-body`
+      const defs =
+        `<defs><radialGradient id="${gid}" cx="0.45" cy="0.3" r="0.8">` +
+        `<stop offset="0" stop-color="#PRIMARYL"/><stop offset="0.55" stop-color="#PRIMARY"/><stop offset="1" stop-color="#PRIMARYD"/>` +
+        `</radialGradient></defs>`
+      const body = model.parts.map((p) => withTransform(p, realisticPart(p, gid))).join('')
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${model.viewBox}">${defs}<g fill="none" stroke="${OUTLINE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${body}</g></svg>`
+    }
   }
 }
 
@@ -134,5 +203,5 @@ export function renderEmbryo(model: EmbryoModel, style: DrawingStyle): string {
 export const EMBRYO_PALETTE: Record<DrawingStyle, { primary: string; secondary?: string }> = {
   basic: { primary: '#e8c9a0', secondary: '#374151' },
   lucida: { primary: OUTLINE },
-  realistic: { primary: '#e8c9a0', secondary: '#374151' },
+  realistic: { primary: '#e9b99b', secondary: '#2b2b33' },
 }
