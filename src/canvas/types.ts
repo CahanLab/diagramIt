@@ -1,5 +1,6 @@
 import type { DrawingStyle } from '../library/types'
-export type ObjectKind = 'shape' | 'text' | 'icon' | 'protocol' | 'ontogeny' | 'connector' | 'image' | 'group' | 'page'
+import type { SketchData } from './sketch'
+export type ObjectKind = 'shape' | 'text' | 'icon' | 'protocol' | 'ontogeny' | 'connector' | 'image' | 'group' | 'page' | 'sketch'
 
 /** Custom data attached to every canvas object (serialised via toObject(['data'])). */
 export interface ObjectData {
@@ -25,6 +26,8 @@ export interface ObjectData {
   ontogeny?: unknown
   /** Arrow head configuration for connectors. */
   arrow?: { start: boolean; end: boolean; headSize: number }
+  /** Camera lucida sketch strokes: the data the path is rendered from (src/canvas/sketch.ts). */
+  sketch?: SketchData
   locked?: boolean
 }
 
@@ -43,6 +46,12 @@ export type ToolId =
   | 'arrow'
   | 'elbowArrow'
   | 'pen'
+  | 'stipple'
+  | 'polyline'
+  | 'eraser'
+
+/** Tools that draw camera lucida sketch marks (the eraser edits them). */
+export const SKETCH_TOOLS: readonly ToolId[] = ['pen', 'stipple', 'polyline', 'eraser']
 
 export interface PageSpec {
   width: number

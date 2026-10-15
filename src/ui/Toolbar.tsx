@@ -1,6 +1,6 @@
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalDistributeCenter, AlignStartHorizontal, AlignStartVertical, AlignVerticalDistributeCenter,
-  ArrowRight, BringToFront, Circle, Copy, CornerDownRight, Diamond, Group, Hand, Hexagon, Minus, MousePointer2, PenLine, Redo2, SendToBack, Square, SquareRoundCorner, Star, Trash2, Triangle, Type, Undo2, Ungroup, CalendarRange, GitBranch,
+  ArrowRight, BringToFront, Circle, Copy, CornerDownRight, Diamond, Eraser, Group, Hand, Hexagon, Minus, MousePointer2, Paintbrush, PenLine, Redo2, SendToBack, Spline, Square, SquareRoundCorner, Star, Trash2, Triangle, Type, Undo2, Ungroup, CalendarRange, GitBranch,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { alignSelection, deleteSelection, distributeSelection, duplicateSelection, groupSelection, reorder, ungroupSelection } from '../canvas/commands'
@@ -22,7 +22,14 @@ const TOOLS: { id: ToolId; label: string; key: string; Icon: ComponentType<{ siz
   { id: 'line', label: 'Line', key: 'L', Icon: Minus },
   { id: 'arrow', label: 'Arrow', key: 'A', Icon: ArrowRight },
   { id: 'elbowArrow', label: 'Elbow arrow', key: 'E', Icon: CornerDownRight },
-  { id: 'pen', label: 'Freehand pen', key: 'P', Icon: PenLine },
+]
+
+/** Camera lucida sketch tools: marks drawn over icons that stay editable (see PropertiesPanel for their settings). */
+const SKETCH: { id: ToolId; label: string; key: string; Icon: ComponentType<{ size?: number }> }[] = [
+  { id: 'pen', label: 'Ink pen', key: 'P', Icon: PenLine },
+  { id: 'stipple', label: 'Stipple brush', key: 'B', Icon: Paintbrush },
+  { id: 'polyline', label: 'Segmented line (click points, double-click to finish)', key: 'N', Icon: Spline },
+  { id: 'eraser', label: 'Eraser', key: 'X', Icon: Eraser },
 ]
 
 export function Toolbar() {
@@ -43,6 +50,13 @@ export function Toolbar() {
       <div className="group">
         {TOOLS.map(({ id, label, key, Icon }) => (
           <button key={id} className={`tbtn${tool === id ? ' active' : ''}`} title={key ? `${label} (${key})` : label} onClick={() => setTool(id)}>
+            <Icon size={18} />
+          </button>
+        ))}
+      </div>
+      <div className="group" aria-label="Sketch tools">
+        {SKETCH.map(({ id, label, key, Icon }) => (
+          <button key={id} className={`tbtn${tool === id ? ' active' : ''}`} title={`${label} (${key})`} onClick={() => setTool(id)}>
             <Icon size={18} />
           </button>
         ))}

@@ -10,6 +10,8 @@ import { findItem, renderingFor } from '../library/registry'
 import { ontogenyOf } from '../ontogeny/render'
 import { protocolOf } from '../protocol/render'
 import { ColorInput } from './ColorInput'
+import { SketchObjectOptions, SketchToolOptions } from './SketchOptions'
+import { SKETCH_TOOLS } from '../canvas/types'
 
 const FONTS = ['Helvetica', 'Arial', 'Times New Roman', 'Georgia', 'Courier New', 'Verdana', 'Trebuchet MS', 'Palatino', 'Futura', 'Gill Sans']
 
@@ -35,12 +37,14 @@ export function PropertiesPanel() {
   const version = useEditor((s) => s.selectionVersion)
   const page = useEditor((s) => s.page)
   const openDialog = useEditor((s) => s.openDialog)
+  const tool = useEditor((s) => s.tool)
   void version
 
   const activeObj = canvas?.getActiveObject()
   if (!canvas || selection.length === 0 || !activeObj) {
     return (
       <div className="props">
+        {SKETCH_TOOLS.includes(tool) && <SketchToolOptions tool={tool} />}
         <h4>Page</h4>
         <div className="row"><label>Size</label><span>{page.width} × {page.height} px</span></div>
         <div className="row"><label>Background</label><ColorInput value={page.background} onChange={(v) => v && useEditor.getState().setPage({ ...page, background: v })} /></div>
@@ -50,7 +54,8 @@ export function PropertiesPanel() {
           Click a library object to insert it, or drag it onto the canvas.<br />
           Double-click text to edit it. Double-click a timeline to edit stages and media.<br />
           Hold ⌘ and scroll to zoom; scroll to pan; hold Space and drag to pan.<br />
-          Shift-drag constrains shapes and lines. Pink guides snap objects to each other.
+          Shift-drag constrains shapes and lines. Pink guides snap objects to each other.<br />
+          Sketch tools (P, B, N, X) draw camera lucida marks over icons; their settings show here while a tool is active.
         </div>
       </div>
     )
@@ -73,7 +78,8 @@ export function PropertiesPanel() {
   const ontogeny = ontogenyOf(single ?? undefined)
   const isText = objs.every((o) => o instanceof IText)
   const anyText = objs.some((o) => o instanceof IText)
-  const isPlainShape = !iconData && !protocol && !ontogeny && !(first instanceof Group) && !(first instanceof ActiveSelection)
+  const isSketch = objs.every((o) => dataOf(o)?.kind === 'sketch')
+  const isPlainShape = !isSketch && !iconData && !protocol && !ontogeny && !(first instanceof Group) && !(first instanceof ActiveSelection)
   const isConnector = dataOf(first)?.kind === 'connector'
   const locked = !!dataOf(first)?.locked
   const textObj = isText ? (first as Textbox) : null
@@ -85,7 +91,7 @@ export function PropertiesPanel() {
 
   return (
     <div className="props">
-      <h4>{objs.length > 1 ? `${objs.length} objects` : iconData ? findItem(iconData.libraryId ?? '')?.name ?? 'Icon' : protocol ? 'Differentiation timeline' : ontogeny ? `Ontogeny: ${ontogeny.graph.name}` : isText ? 'Text' : isConnector ? 'Connector' : first instanceof Group ? 'Group' : 'Shape'}</h4>
+      <h4>{objs.length > 1 ? `${objs.length} objects` : isSketch ? 'Sketch' : iconData ? findItem(iconData.libraryId ?? '')?.name ?? 'Icon' : protocol ? 'Differentiation timeline' : ontogeny ? `Ontogeny: ${ontogeny.graph.name}` : isText ? 'Text' : isConnector ? 'Connector' : first instanceof Group ? 'Group' : 'Shape'}</h4>
 
       {protocol && (
         <div className="btn-row">
@@ -129,6 +135,8 @@ export function PropertiesPanel() {
           )}
         </>
       )}
+
+      {isSketch && <SketchObjectOptions objs={objs} apply={apply} />}
 
       {(isPlainShape || isConnector || anyText) && (
         <>

@@ -1,5 +1,9 @@
-import { Canvas, Ellipse, FabricObject, Path, PencilBrush, Point, Polygon, Rect, Textbox, type TPointerEventInfo } from 'fabric'
+import { Canvas, Ellipse, FabricObject, Path, Point, Polygon, Rect, Textbox, type TPointerEventInfo } from 'fabric'
 import { arrowHead, elbowPoints, pathD, shortenEnd } from './arrows'
+import { InkBrush, StippleBrush, makeSketchPath } from './brushes'
+import type { SketchSettings } from './editorStore'
+import { eraseAt } from './eraser'
+import { runsPathD } from './sketch'
 import type { ObjectData, ToolId } from './types'
 
 export const DEFAULT_FONT = 'Helvetica'
@@ -118,26 +122,89 @@ export interface ToolController {
  * Attach pointer handlers implementing the drawing tools. The `onDone` callback
  * fires when a creation tool finishes so the app can revert to the select tool.
  */
-export function attachTools(canvas: Canvas, opts: { onDone: (keep: boolean) => void }): ToolController {
+export function attachTools(canvas: Canvas, opts: { onDone: (keep: boolean) => void; sketch: () => SketchSettings }): ToolController {
   let tool: ToolId = 'select'
   let start: Point | null = null
   let draft: FabricObject | null = null
   let panning = false
   let lastClient: { x: number; y: number } | null = null
   let spaceHeld = false
+  // segmented line in progress
+  let verts: Point[] = []
+  let rubber: Path | null = null
+  // eraser drag
+  let erasing = false
+  let eraseChanged = false
+  let lastErase: Point | null = null
 
-  const pencil = new PencilBrush(canvas)
-  pencil.color = '#1f2937'
-  pencil.width = 3
+  const ink = new InkBrush(canvas, opts.sketch)
+  const stippler = new StippleBrush(canvas, opts.sketch)
 
   const applyMode = () => {
-    const creating = tool !== 'select' && tool !== 'pan' && tool !== 'pen'
-    canvas.isDrawingMode = tool === 'pen'
+    const drawing = tool === 'pen' || tool === 'stipple'
+    const creating = tool !== 'select' && tool !== 'pan' && !drawing
+    canvas.isDrawingMode = drawing
     canvas.selection = tool === 'select'
-    canvas.defaultCursor = tool === 'pan' ? 'grab' : creating ? 'crosshair' : 'default'
+    canvas.defaultCursor = tool === 'pan' ? 'grab' : tool === 'eraser' ? 'none' : creating ? 'crosshair' : 'default'
     canvas.hoverCursor = tool === 'select' ? 'move' : canvas.defaultCursor
     canvas.skipTargetFind = tool !== 'select'
-    if (tool === 'pen') canvas.freeDrawingBrush = pencil
+    if (tool === 'pen') canvas.freeDrawingBrush = ink
+    if (tool === 'stipple') canvas.freeDrawingBrush = stippler
+  }
+
+  /** Snap the segment from `from` to `to` to a multiple of 45°. */
+  const snap45 = (from: Point, to: Point): Point => {
+    const dx = to.x - from.x
+    const dy = to.y - from.y
+    const len = Math.hypot(dx, dy)
+    const a = (Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * Math.PI) / 4
+    return new Point(from.x + Math.cos(a) * len, from.y + Math.sin(a) * len)
+  }
+  const clearRubber = () => {
+    if (rubber) canvas.remove(rubber)
+    rubber = null
+  }
+  const updateRubber = (cursor?: Point) => {
+    clearRubber()
+    const pts = [...verts, ...(cursor ? [cursor] : [])].map((q): [number, number] => [q.x, q.y])
+    if (pts.length < 2) return
+    const s = opts.sketch()
+    rubber = new Path(runsPathD([pts], 0), { stroke: s.ink, strokeWidth: s.penWidth, fill: '', strokeLineCap: 'round', strokeLineJoin: 'round', selectable: false, evented: false, objectCaching: false, excludeFromExport: true })
+    canvas.add(rubber)
+    canvas.requestRenderAll()
+  }
+  const cancelPolyline = () => {
+    verts = []
+    clearRubber()
+    canvas.requestRenderAll()
+  }
+  const finishPolyline = () => {
+    const last = verts[verts.length - 1]
+    const prev = verts[verts.length - 2]
+    if (last && prev && Math.hypot(last.x - prev.x, last.y - prev.y) < 3) verts.pop() // the double click's second vertex
+    const pts = verts.map((q): [number, number] => [+q.x.toFixed(2), +q.y.toFixed(2)])
+    cancelPolyline()
+    if (pts.length < 2) return
+    const s = opts.sketch()
+    const path = makeSketchPath({ tool: 'polyline', runs: [pts], smooth: 0 }, s.ink, s.penWidth)
+    canvas.add(path)
+    path.setCoords()
+    canvas.requestRenderAll()
+  }
+  const drawEraserCursor = (p: Point) => {
+    const ctx = canvas.contextTop
+    canvas.clearContext(ctx)
+    const v = canvas.viewportTransform
+    ctx.save()
+    ctx.transform(v[0], v[1], v[2], v[3], v[4], v[5])
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, opts.sketch().eraserRadius, 0, 2 * Math.PI)
+    ctx.strokeStyle = '#2563eb'
+    ctx.lineWidth = 1 / v[0]
+    ctx.setLineDash([3 / v[0], 3 / v[0]])
+    ctx.stroke()
+    ctx.restore()
+    ;(canvas as unknown as { contextTopDirty: boolean }).contextTopDirty = true
   }
 
   const onDown = (e: TPointerEventInfo) => {
@@ -148,8 +215,22 @@ export function attachTools(canvas: Canvas, opts: { onDone: (keep: boolean) => v
       canvas.setCursor('grabbing')
       return
     }
-    if (tool === 'select' || tool === 'pen') return
+    if (tool === 'select' || tool === 'pen' || tool === 'stipple') return
     const p = sceneOf(canvas, e)
+    if (tool === 'polyline') {
+      const prev = verts[verts.length - 1]
+      const q = prev && ev.shiftKey ? snap45(prev, p) : p
+      verts.push(new Point(q.x, q.y))
+      updateRubber(q)
+      return
+    }
+    if (tool === 'eraser') {
+      erasing = true
+      lastErase = p
+      if (eraseAt(canvas, p, opts.sketch().eraserRadius)) eraseChanged = true
+      drawEraserCursor(p)
+      return
+    }
     if (tool === 'text') {
       const tb = createText(p.x, p.y, 'Text')
       canvas.add(tb)
@@ -168,6 +249,28 @@ export function attachTools(canvas: Canvas, opts: { onDone: (keep: boolean) => v
     if (panning && lastClient) {
       canvas.relativePan(new Point(ev.clientX - lastClient.x, ev.clientY - lastClient.y))
       lastClient = { x: ev.clientX, y: ev.clientY }
+      return
+    }
+    if (tool === 'eraser') {
+      const p = sceneOf(canvas, e)
+      if (erasing && lastErase) {
+        const r = opts.sketch().eraserRadius
+        const d = Math.hypot(p.x - lastErase.x, p.y - lastErase.y)
+        const steps = Math.max(1, Math.ceil(d / (r / 2)))
+        for (let i = 1; i <= steps; i++) {
+          const q = new Point(lastErase.x + ((p.x - lastErase.x) * i) / steps, lastErase.y + ((p.y - lastErase.y) * i) / steps)
+          if (eraseAt(canvas, q, r)) eraseChanged = true
+        }
+        lastErase = p
+      }
+      drawEraserCursor(p)
+      return
+    }
+    if (tool === 'polyline') {
+      if (verts.length) {
+        const p = sceneOf(canvas, e)
+        updateRubber(ev.shiftKey ? snap45(verts[verts.length - 1]!, p) : p)
+      }
       return
     }
     if (!start) return
@@ -203,6 +306,15 @@ export function attachTools(canvas: Canvas, opts: { onDone: (keep: boolean) => v
       canvas.setCursor(tool === 'pan' ? 'grab' : 'default')
       return
     }
+    if (tool === 'eraser' && erasing) {
+      erasing = false
+      lastErase = null
+      if (eraseChanged) {
+        eraseChanged = false
+        canvas.fire('object:modified', {} as never)
+      }
+      return
+    }
     if (!start) return
     const ev = e.e as MouseEvent
     if (draft) {
@@ -235,11 +347,22 @@ export function attachTools(canvas: Canvas, opts: { onDone: (keep: boolean) => v
   }
 
   const onPathCreated = (e: { path: FabricObject }) => {
-    tag(e.path, { kind: 'shape' })
-    e.path.set({ strokeUniform: true })
+    if (!e.path.get('data')) tag(e.path, { kind: 'shape' })
+  }
+
+  const onDblClick = () => {
+    if (tool === 'polyline' && verts.length >= 2) finishPolyline()
   }
 
   const onKey = (ev: KeyboardEvent) => {
+    if (tool === 'polyline' && ev.type === 'keydown' && !isTyping(ev)) {
+      if (ev.key === 'Enter' && verts.length >= 2) {
+        ev.preventDefault()
+        finishPolyline()
+        return
+      }
+      if (ev.key === 'Escape') cancelPolyline()
+    }
     if (ev.code === 'Space' && !isTyping(ev)) {
       if (ev.type === 'keydown' && !spaceHeld) {
         spaceHeld = true
@@ -257,6 +380,7 @@ export function attachTools(canvas: Canvas, opts: { onDone: (keep: boolean) => v
   canvas.on('mouse:move', onMove)
   canvas.on('mouse:up', onUp)
   canvas.on('path:created', onPathCreated as never)
+  canvas.on('mouse:dblclick', onDblClick)
   window.addEventListener('keydown', onKey)
   window.addEventListener('keyup', onKey)
   applyMode()
@@ -267,6 +391,10 @@ export function attachTools(canvas: Canvas, opts: { onDone: (keep: boolean) => v
       start = null
       if (draft) canvas.remove(draft)
       draft = null
+      cancelPolyline()
+      erasing = false
+      lastErase = null
+      canvas.clearContext(canvas.contextTop)
       applyMode()
       canvas.requestRenderAll()
     },
@@ -275,6 +403,7 @@ export function attachTools(canvas: Canvas, opts: { onDone: (keep: boolean) => v
       canvas.off('mouse:move', onMove)
       canvas.off('mouse:up', onUp)
       canvas.off('path:created', onPathCreated as never)
+      canvas.off('mouse:dblclick', onDblClick)
       window.removeEventListener('keydown', onKey)
       window.removeEventListener('keyup', onKey)
     },

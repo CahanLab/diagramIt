@@ -5,7 +5,7 @@ import { redo, undo } from '../canvas/FabricCanvas'
 import { isTyping } from '../canvas/tools'
 import type { ToolId } from '../canvas/types'
 
-const TOOL_KEYS: Record<string, ToolId> = { v: 'select', h: 'pan', t: 'text', r: 'rect', u: 'roundRect', o: 'ellipse', l: 'line', a: 'arrow', e: 'elbowArrow', p: 'pen' }
+const TOOL_KEYS: Record<string, ToolId> = { v: 'select', h: 'pan', t: 'text', r: 'rect', u: 'roundRect', o: 'ellipse', l: 'line', a: 'arrow', e: 'elbowArrow', p: 'pen', b: 'stipple', n: 'polyline', x: 'eraser' }
 
 export function installShortcuts(actions: { save: () => void; open: () => void; exportDialog: () => void; newDoc: () => void }): () => void {
   const onKey = (e: KeyboardEvent) => {

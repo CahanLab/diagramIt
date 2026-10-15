@@ -27,8 +27,16 @@ release with that CHANGELOG section as notes).
 ## Architecture map
 
 - `src/canvas/` — Fabric canvas wrapper (`FabricCanvas.tsx`), zustand store
-  (`editorStore.ts`), tools, history (undo/redo snapshots), commands
-  (duplicate/group/align/order), snapping guides (`guides.ts`), `fit.ts`.
+  (`editorStore.ts`, incl. the sketch tool settings), tools (`tools.ts`:
+  shapes, segmented line, eraser drag), history (undo/redo snapshots),
+  commands (duplicate/group/align/order), snapping guides (`guides.ts`),
+  `fit.ts`. Camera lucida sketch tools: pure geometry in `sketch.ts` (path
+  data from sketch data, dot scattering, erasing of runs, dots and Fabric
+  path commands), Fabric brushes in `brushes.ts` (`InkBrush`,
+  `StippleBrush`, `setPathInPlace` which re-renders a path without moving
+  it), the vector eraser in `eraser.ts`; sketch objects are `Path`s with
+  `data.kind = 'sketch'` and `data.sketch`. Spec:
+  `docs/superpowers/specs/2026-10-15-lucida-sketch-tools-design.md`.
 - `src/draw/` — shared primitive drawing commands (`Cmd`), Fabric renderer
   (`render.ts`) and SVG previewer (`svg.ts`). Both smart objects emit `Cmd[]`.
 - `src/protocol/` — differentiation timeline: `types.ts`, pure `layout.ts`,
@@ -88,7 +96,10 @@ re-opens the editor and `replace*Group` re-renders in place.
   validates structure. Curated content was authored by subagents from
   references listed in each file's `source`; treat biology edits carefully.
 - Dev-only `window.__diagramit` exposes canvas/store/export for Playwright
-  checks (used by the maintainer with the Playwright MCP). Autosave lives in
+  checks (used by the maintainer with the Playwright MCP). Fabric listens for
+  mouse events (not pointer events) and a double-click needs `detail: 2`, so
+  synthetic drawing in tests dispatches `MouseEvent`s on `canvas.upperCanvasEl`
+  (moves and ups on `document`). Autosave lives in
   `localStorage['diagramit.autosave.v1']`; clear it to get the fresh sample.
 - Writing style in UI copy: British spelling (colour, centre), sentence case.
 

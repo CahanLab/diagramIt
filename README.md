@@ -106,6 +106,10 @@ local storage. Projects are saved as `.diagramit.json` files.
   shows a live preview. Double-click an inserted ontogeny to edit it again.
 - **Drawing tools**: text, rectangle, rounded rectangle, ellipse, triangle,
   diamond, hexagon, star, line, arrow, elbow arrow, freehand pen.
+- **Sketch tools** (camera lucida): ink pen, stipple brush with dot, ring or
+  tick marks, segmented lines that can be smoothed after drawing, and a vector
+  eraser, for drawing tissues over the developmental icons; every mark stays
+  an editable object (P, B, N, X).
 - **Editing**: move/scale/rotate handles, multi-select, group/ungroup,
   duplicate, copy/paste, align and distribute, z-order, flip, lock, snapping
   guides, nudge with arrow keys, undo/redo, zoom and pan.

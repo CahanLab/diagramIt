@@ -30,6 +30,26 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-15
+
+### Added
+
+- Camera lucida sketch tools in a new toolbar group, for drawing tissues and
+  annotations over the developmental icons (or anything else): an ink pen
+  (P; width, smoothing), a stipple brush (B; radius, dot density, dot size,
+  dot style dot / ring / tick), a segmented line (N; click points,
+  double-click or Enter to finish, Shift for 45°) that can be smoothed
+  afterwards from its properties, and an eraser (X) that removes the parts
+  of sketch marks and icon lines under the cursor. Tool settings show in the
+  Properties panel while a tool is active and persist between sessions.
+  Sketch marks are ordinary objects: select, move, copy, paste, delete,
+  group, export. Spec: `docs/superpowers/specs/2026-10-15-lucida-sketch-tools-design.md`.
+
+### Changed
+
+- The freehand pen now draws thin ink (1.2 px by default) and its strokes
+  can be smoothed, re-coloured and erased afterwards.
+
 ## [0.11.0] - 2026-10-15
 
 ### Added

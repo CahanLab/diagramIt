@@ -174,6 +174,7 @@ export function FabricCanvas() {
       onDone: (keep) => {
         if (!keep) useEditor.getState().setTool('select')
       },
+      sketch: () => useEditor.getState().sketch,
     })
     toolsRef.current.setTool(useEditor.getState().tool)
     resetHistory()
