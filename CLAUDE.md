@@ -128,6 +128,9 @@ re-opens the editor and `replace*Group` re-renders in place.
   Muscle groups are the E14.5 model's masses reused from E13.5 to E18.5;
   digit bones are generated rather than traced.
 - Embryos are flat traced silhouettes: the realistic style shows no organs.
+- Sketch tools (0.12.0): polylines have no vertex handles after drawing; the
+  eraser leaves fills and text alone; erasing a curved icon line flattens the
+  touched subpath into straight segments (eight per curve).
 - Custom-library SVG sanitiser rejects gradients, so a realistic icon cannot be
   saved as a custom library item.
 - PyMuPDF cannot rasterise gradient fills; use `qlmanage -s <max dim>` (or the

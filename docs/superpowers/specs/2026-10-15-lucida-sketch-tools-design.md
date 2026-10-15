@@ -58,7 +58,7 @@ A sketch is a Fabric `Path` whose `data` is
 type DotStyle = 'dot' | 'ring' | 'tick'
 type SketchData =
   | { tool: 'pen' | 'polyline'; runs: Pt[][]; smooth: number }
-  | { tool: 'stipple'; dots: [x: number, y: number, size: number, angle: number][]; style: DotStyle }
+  | { tool: 'stipple'; dots: [x: number, y: number, size: number, angle: number][]; style: DotStyle; size: number }
 ```
 
 Points are in the path's own coordinate space (scene coordinates at the time
@@ -69,13 +69,19 @@ functions in `src/canvas/sketch.ts`:
 - runs: straight segments when `smooth` is 0, a Catmull-Rom spline whose
   handle length is scaled by `smooth` otherwise (so 0.5 is a half-way
   rounding of the corners); one subpath per run.
-- dots: `M x y h0.01` with round caps (dot); a circle of radius 0.5·size
-  drawn with a 0.35·size stroke (ring); a segment of length 2.5·size through
-  the dot at `angle` (tick). One `<path>` per cloud, stroke width = dot size
-  (0.35·size for rings).
+- dots: a filled disc of diameter `size` (dot); a circle of radius 0.5·size
+  drawn with a 0.3·size stroke (ring); a segment of length 2.5·size through
+  the dot at `angle` with a 0.45·size stroke (tick). One `<path>` per cloud;
+  the cloud's `size` is the setting the dots were scattered with, so the
+  properties panel can show and change it.
 
-Re-rendering after a smoothing change or an erase uses Fabric's
-`Path._setPath(d, true)`, which keeps the object in place.
+Re-rendering after a smoothing change or an erase goes through
+`setPathInPlace` in `src/canvas/brushes.ts`: it calls `Path._setPath(d)`
+without Fabric's own position adjustment and re-derives the centre from the
+change in `pathOffset` through the object's own matrix. Fabric's
+`_setPath(d, true)` assumes path coordinates are parent coordinates, which
+stops being true once a path has been moved or lives inside a group, so it
+shifted moved sketches and icon children.
 
 ## Interaction
 
@@ -145,3 +151,26 @@ paths).
 - Pressure or tilt sensitivity; vertex handles for editing a polyline after
   drawing; erasing filled shapes or text; a lasso selection; hatching as a
   fill pattern (hatching is drawn with the pen or the tick dot style).
+
+## Status (2026-10-15)
+
+Shipped in 0.12.0 (commit 6eb390e); plan
+`docs/superpowers/plans/2026-10-15-lucida-sketch-tools.md`. Decisions made
+while implementing:
+
+- `setPathInPlace` replaces the `_setPath(d, true)` the design assumed (see
+  "Sketch objects").
+- Fabric brushes receive mouse events, not pointer events, and a double-click
+  needs `detail: 2`; the Playwright check dispatches `MouseEvent`s on
+  `canvas.upperCanvasEl`.
+- Stipple dots are filled discs rather than zero-length strokes, so the dot
+  style can be switched in the properties panel without touching the stroke
+  width; the cloud keeps its `size`.
+- The eraser culls by bounding box, maps the circle into path space and
+  treats every stroked `Path` the same way, so it also edits the children of
+  icon groups without ungrouping. A curved icon line that is erased loses
+  its curves on the touched subpath (eight samples per curve), which shows
+  on a close zoom.
+
+Known gaps, also listed in CLAUDE.md: no vertex editing for polylines, fills
+and text are not erased, touched icon curves are flattened.

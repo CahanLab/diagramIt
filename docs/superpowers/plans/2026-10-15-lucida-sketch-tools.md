@@ -1,6 +1,6 @@
 # Camera Lucida Sketch Tools Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add ink pen, stipple brush, segmented line (smoothable afterwards) and eraser tools whose marks are ordinary, editable canvas objects.
 
@@ -9,6 +9,13 @@
 **Tech Stack:** TypeScript, Fabric.js 7 (`PencilBrush`, `BaseBrush`, `Path._setPath`, `util.invertTransform`), zustand, React, vitest.
 
 **Spec:** `docs/superpowers/specs/2026-10-15-lucida-sketch-tools-design.md`
+
+**Status:** Completed 2026-10-15 and shipped as 0.12.0 (commit 6eb390e). Review
+Focus item 1 named the wrong remedy: `_setPath(d, true)` moved paths that had
+been dragged or sat inside a group, so `setPathInPlace` in
+`src/canvas/brushes.ts` re-derives the centre from the `pathOffset` change
+instead. The decisions taken during implementation are in the spec's Status
+section.
 
 ## Global Constraints
 
@@ -31,52 +38,52 @@
 
 **Files:** Modify `src/canvas/types.ts`, `src/canvas/editorStore.ts`; test `src/canvas/editorStore.test.ts` (new).
 
-- [ ] Add `'stipple' | 'polyline' | 'eraser'` to `ToolId`; add `'sketch'` to `ObjectKind`; add `sketch?: SketchData` to `ObjectData` (type from `sketch.ts`).
-- [ ] Add `SketchSettings` (ink, penWidth, penSmooth, brushRadius, dotDensity, dotSize, dotStyle, eraserRadius) with defaults, `sketch` state, `setSketch(partial)` persisting to `diagramit.sketch.v1`.
-- [ ] Test: `setSketch({ penWidth: 3 })` persists and reloads (mock localStorage via jsdom).
+- [x] Add `'stipple' | 'polyline' | 'eraser'` to `ToolId`; add `'sketch'` to `ObjectKind`; add `sketch?: SketchData` to `ObjectData` (type from `sketch.ts`).
+- [x] Add `SketchSettings` (ink, penWidth, penSmooth, brushRadius, dotDensity, dotSize, dotStyle, eraserRadius) with defaults, `sketch` state, `setSketch(partial)` persisting to `diagramit.sketch.v1`.
+- [x] Test: `setSketch({ penWidth: 3 })` persists and reloads (mock localStorage via jsdom).
 
 ### Task 2: Pure sketch geometry
 
 **Files:** Create `src/canvas/sketch.ts`, `src/canvas/sketch.test.ts`.
 
-- [ ] `sketchPathD(sketch)`; `runsPathD(runs, smooth)`; `dotsPathD(dots, style)`.
-- [ ] `scatterDots(rng, centre, radius, n, size, angle)`; `sweepCount(density, radius, distance, carry)`; `mulberry32`.
-- [ ] `eraseRuns(runs, c, r)` → runs; `eraseDots(dots, c, r)`.
-- [ ] `flattenCommands(path: SimplePathCommand[])` → `{ points, closed }[]`; `commandsFromRuns(runs)` → M/L command list; `eraseCommands(path, c, r)`.
-- [ ] Tests as listed in the spec.
+- [x] `sketchPathD(sketch)`; `runsPathD(runs, smooth)`; `dotsPathD(dots, style)`.
+- [x] `scatterDots(rng, centre, radius, n, size, angle)`; `sweepCount(density, radius, distance, carry)`; `mulberry32`.
+- [x] `eraseRuns(runs, c, r)` → runs; `eraseDots(dots, c, r)`.
+- [x] `flattenCommands(path: SimplePathCommand[])` → `{ points, closed }[]`; `commandsFromRuns(runs)` → M/L command list; `eraseCommands(path, c, r)`.
+- [x] Tests as listed in the spec.
 
 ### Task 3: Brushes
 
 **Files:** Create `src/canvas/brushes.ts`.
 
-- [ ] `makeSketchPath(sketch, style)`: a `Path` with `data`, stroke, width, caps, `fill: ''`.
-- [ ] `InkBrush extends PencilBrush`: `_finalizeAndAddPath` override building a sketch path from `this._points` (decimated), firing `path:created`.
-- [ ] `StippleBrush extends BaseBrush`: settings, live drawing on `contextTop` with `_saveAndTransform`, one sketch path on mouse up.
+- [x] `makeSketchPath(sketch, style)`: a `Path` with `data`, stroke, width, caps, `fill: ''`.
+- [x] `InkBrush extends PencilBrush`: `_finalizeAndAddPath` override building a sketch path from `this._points` (decimated), firing `path:created`.
+- [x] `StippleBrush extends BaseBrush`: settings, live drawing on `contextTop` with `_saveAndTransform`, one sketch path on mouse up.
 
 ### Task 4: Eraser
 
 **Files:** Create `src/canvas/eraser.ts`.
 
-- [ ] `eraseAt(canvas, point, radius)`: walk `canvas.getObjects()` recursively into groups; for each `Path`, map the circle into path space (`util.invertTransform(obj.calcTransformMatrix())`, radius / mean scale); sketch → `eraseRuns`/`eraseDots` and rebuild; other paths → `eraseCommands`; `_setPath(d, true)`; remove emptied objects (from the canvas or their group); mark groups dirty. Returns whether anything changed.
+- [x] `eraseAt(canvas, point, radius)`: walk `canvas.getObjects()` recursively into groups; for each `Path`, map the circle into path space (`util.invertTransform(obj.calcTransformMatrix())`, radius / mean scale); sketch → `eraseRuns`/`eraseDots` and rebuild; other paths → `eraseCommands`; `_setPath(d, true)`; remove emptied objects (from the canvas or their group); mark groups dirty. Returns whether anything changed.
 
 ### Task 5: Tool interaction
 
 **Files:** Modify `src/canvas/tools.ts`.
 
-- [ ] `applyMode`: drawing mode for `pen` and `stipple` with the brush configured from `useEditor.getState().sketch`; crosshair for polyline and eraser.
-- [ ] Polyline: vertices, rubber band draft (`Path`, non-selectable), Shift 45°, dblclick/Enter finish, Escape cancel, `setTool` cancels.
-- [ ] Eraser: on down/move sample points every radius/2 and call `eraseAt`; draw the cursor circle on `contextTop`; on up fire `object:modified` if anything changed.
+- [x] `applyMode`: drawing mode for `pen` and `stipple` with the brush configured from `useEditor.getState().sketch`; crosshair for polyline and eraser.
+- [x] Polyline: vertices, rubber band draft (`Path`, non-selectable), Shift 45°, dblclick/Enter finish, Escape cancel, `setTool` cancels.
+- [x] Eraser: on down/move sample points every radius/2 and call `eraseAt`; draw the cursor circle on `contextTop`; on up fire `object:modified` if anything changed.
 
 ### Task 6: Toolbar, shortcuts, properties
 
 **Files:** Modify `src/ui/Toolbar.tsx`, `src/app/shortcuts.ts`, `src/ui/PropertiesPanel.tsx`, `src/app/layout.css`.
 
-- [ ] Toolbar: move `pen` into a new Sketch group with stipple, polyline, eraser.
-- [ ] Shortcuts: `b`, `n`, `x`.
-- [ ] Properties: tool settings section when a sketch tool is active and nothing is selected; sketch object section (ink, width or dot size/style, smoothing) replacing the plain-shape rows.
+- [x] Toolbar: move `pen` into a new Sketch group with stipple, polyline, eraser.
+- [x] Shortcuts: `b`, `n`, `x`.
+- [x] Properties: tool settings section when a sketch tool is active and nothing is selected; sketch object section (ink, width or dot size/style, smoothing) replacing the plain-shape rows.
 
 ### Task 7: Docs, tests, release
 
-- [ ] CHANGELOG 0.12.0, package.json, CLAUDE.md architecture map, README feature list.
-- [ ] `npm test`, `npm run build`, Playwright check: draw with each tool over a lucida limb, smooth a polyline, erase part of a stroke and part of the icon, copy/paste a sketch; screenshot.
-- [ ] Commit, push, release.
+- [x] CHANGELOG 0.12.0, package.json, CLAUDE.md architecture map, README feature list.
+- [x] `npm test`, `npm run build`, Playwright check: draw with each tool over a lucida limb, smooth a polyline, erase part of a stroke and part of the icon, copy/paste a sketch; screenshot.
+- [x] Commit, push, release.

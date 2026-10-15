@@ -10,6 +10,16 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-14-mouse-embryo-limb-icons-design.md`
 
+**Status:** Executed on 2026-10-14 and shipped as 0.5.0 (74 icons: 9 embryos,
+65 limbs); the checkboxes below were not ticked during execution. The
+hand-authored stage data and generator this plan describes were replaced in
+0.10.0 by shapes built from references (embryos traced from eMouseAtlas
+Theiler plates by `scripts/embryos/run.sh`, limb silhouettes and tissues
+from `scripts/limbs/author.py`), and 0.11.0 withdrew the tissue versions
+from the library, which now lists 27 developmental items (9 embryos, 18 limb
+outlines). That work is recorded in phase 5 of
+`docs/superpowers/specs/2026-10-14-drawing-styles-design.md`.
+
 ## Global Constraints
 
 - Icon contract: `viewBox` only, allowed elements `svg g path rect circle ellipse line polyline polygon title`, no `url()`, no `<text>`/`<defs>`/gradients/filters; outlines `#1f2937`; recolourable regions `#PRIMARY`/`#SECONDARY` (`src/library/types.ts`).
