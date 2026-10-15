@@ -103,7 +103,8 @@ const dotPositions = (d: string): [number, number][] => [...d.matchAll(/M(-?[\d.
 function embryoTone(model: EmbryoModel): string {
   const body = model.parts.find((p) => p.tag === 'body')
   if (!body) return ''
-  const poly = flattenPath(body.d, body.transform)[0]?.points
+  // three segments per curve: the traced plates have a control point every unit or two, so finer sampling only costs time
+  const poly = flattenPath(body.d, body.transform, 3)[0]?.points
   if (!poly || poly.length < 3) return ''
   const k = model.strokeWidth / 2.5
   const spacing = model.strokeWidth * 1.15

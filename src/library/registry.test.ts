@@ -61,7 +61,7 @@ describe('library registry', () => {
     expect(renderingFor(plain, 'lucida').svg).toBe(plain.svg)
     expect(renderingFor(plain, 'realistic')).toEqual({ svg: plain.svg, primary: plain.primary, secondary: plain.secondary })
   })
-  it('every styled rendering validates and recolours fully', () => {
+  it('every styled rendering validates and recolours fully', { timeout: 60000 }, () => {
     const styled = allItems().filter((i) => i.styles)
     expect(styled.length).toBe(74)
     for (const i of styled) {

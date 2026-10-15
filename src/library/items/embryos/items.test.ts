@@ -32,7 +32,7 @@ describe('traced embryo models', () => {
       expect((m.strokeWidth * it.height) / vbH).toBeCloseTo(1.3, 1)
     })
   })
-  it('renders every style as valid SVG; lucida is ink only', () => {
+  it('renders every style as valid SVG; lucida is ink only', { timeout: 60000 }, () => {
     for (const m of models) {
       for (const style of ['basic', 'lucida', 'realistic'] as const) {
         const svg = renderEmbryo(m, style)

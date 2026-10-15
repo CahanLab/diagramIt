@@ -30,6 +30,16 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-10-15
+
+### Fixed
+
+- Camera lucida embryo shading samples the silhouette at three segments per
+  curve instead of ten, so the nine embryos render in about 0.35 s instead of
+  1 s on the maintainer's machine; the two library validation sweeps carry a
+  60 s test timeout (they exceeded vitest's 5 s default on the GitHub runner,
+  which blocked the 0.10.0 deploy).
+
 ## [0.10.0] - 2026-10-15
 
 ### Changed
