@@ -7,6 +7,12 @@ tissues, species, molecular biology/omics, analyses) and a **differentiation
 timeline builder** for figures that show iPSCs being guided to a cell type by
 a series of media changes over time.
 
+![Part of a developmental ontogeny of C. elegans drawn in DiagramIt: the lineage tree from the zygote to hatching, coloured by founder cell, with stage bands and a legend](public/screenshot.png)
+
+*Part of a C. elegans developmental ontogeny made with the ontogeny builder:
+lineage branches coloured by founder cell, dashed lines for cells that migrate,
+stage bands from the 28-cell stage to hatching.*
+
 ## Use it
 
 Hosted build (no install): https://cahanlab.github.io/diagramIt/
