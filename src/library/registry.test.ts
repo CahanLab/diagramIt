@@ -53,7 +53,7 @@ describe('library registry', () => {
     expect(CATEGORY_LABELS.development).toBe('Developmental stages')
   })
   it('renderingFor returns the styled rendering or falls back to basic', () => {
-    const limb = findItem('development.mouse-forelimb-e13-5-skeleton')!
+    const limb = findItem('development.mouse-forelimb-e13-5')!
     expect(renderingFor(limb, 'lucida').svg).toBe(limb.styles!.lucida!.svg)
     expect(renderingFor(limb, 'lucida').primary).toBe('#1f2937')
     expect(renderingFor(limb, 'realistic').svg).toBe(limb.styles!.realistic!.svg)
@@ -63,7 +63,7 @@ describe('library registry', () => {
   })
   it('every styled rendering validates and recolours fully', { timeout: 60000 }, () => {
     const styled = allItems().filter((i) => i.styles)
-    expect(styled.length).toBe(74)
+    expect(styled.length).toBe(27)
     for (const i of styled) {
       for (const r of Object.values(i.styles!)) {
         expect(validateItem({ ...i, svg: r.svg })).toEqual([])

@@ -92,7 +92,7 @@ export const items: LibraryItem[] = models.map((m) => {
   const day = m.stage.slice(1)
   return {
     id: `development.mouse-embryo-${m.stage.toLowerCase().replace('.', '-')}`,
-    name: `Mouse embryo ${m.stage}`,
+    name: `${m.stage} embryo`,
     category: 'development',
     keywords: [...COMMON, m.stage.toLowerCase(), `${day} dpc`, `ts${m.theiler}`, `theiler ${m.theiler}`, `theiler stage ${m.theiler}`, ...STAGE_KEYWORDS[m.stage]],
     svg: renderEmbryo(m, 'basic'),

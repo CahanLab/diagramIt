@@ -30,6 +30,26 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-15
+
+### Added
+
+- The version number is shown under the DiagramIt logo.
+
+### Changed
+
+- Developmental stage icons are named stage first ("E14.5 embryo",
+  "E14.5 forelimb") so the labels fit the library grid.
+- Limb buds at E10.5 are domes and the E11.5 forelimb paddle has a rounded
+  handplate that stands out from the stalk.
+
+### Removed
+
+- The limb skeleton, muscle-and-tendon and innervation icons are no longer
+  offered in the library (the stage models keep them for a later return).
+  Documents that contain them still open; only "Style" re-rendering of those
+  icons is unavailable. The library now has 27 developmental icons.
+
 ## [0.10.1] - 2026-10-15
 
 ### Fixed

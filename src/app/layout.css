@@ -20,6 +20,8 @@ button { cursor: pointer; }
 .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--border); }
 .topbar .brand { font-weight: 700; font-size: 15px; margin-right: 12px; display: flex; align-items: center; gap: 6px; }
 .topbar .brand svg { width: 20px; height: 20px; }
+.topbar .brand-text { display: flex; flex-direction: column; line-height: 1.05; }
+.topbar .brand-version { font-size: 9px; font-weight: 400; color: var(--muted); letter-spacing: .02em; }
 .topbar .spacer { flex: 1; }
 .topbar .doc-name { border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; min-width: 160px; background: transparent; }
 .topbar .doc-name:focus { border-color: var(--border); outline: none; background: var(--bg); }

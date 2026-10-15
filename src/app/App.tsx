@@ -27,7 +27,7 @@ import { SaveEntryDialog } from '../ui/SaveEntryDialog'
 import { selectionToSvg } from '../libraries/capture'
 import { loadLibrariesFromQuery } from '../libraries/io'
 import { librariesStore } from '../libraries/store'
-import { ABOUT } from './about'
+import { ABOUT, APP_VERSION } from './about'
 import { installShortcuts } from './shortcuts'
 import './layout.css'
 
@@ -193,7 +193,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="topbar">
-        <div className="brand"><Logo /> DiagramIt</div>
+        <div className="brand"><Logo /><span className="brand-text">DiagramIt<small className="brand-version">v{APP_VERSION}</small></span></div>
         <Menu label="File">
           <MenuItem label="New blank figure" shortcut="⌘⇧N" onClick={() => void newDoc('blank')} />
           {TEMPLATES.filter((t) => t.id !== 'blank').map((t) => <MenuItem key={t.id} label={`New: ${t.name}`} onClick={() => void newDoc(t.id)} />)}

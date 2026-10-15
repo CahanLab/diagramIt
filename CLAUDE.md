@@ -111,6 +111,8 @@ re-opens the editor and `replace*Group` re-renders in place.
 - Label collisions in dense ontogeny trees; a proper label-overlap pass would help.
 - PowerPoint "Convert to Shape" on the exported SVG not verified in PowerPoint itself.
 - PDF export not visually verified (no rasteriser installed on this machine).
+- Only the limb outline icons are in the library (0.11.0); the skeleton,
+  muscle and innervation renderers and their tests remain for a later return.
 - Limb icons show dorsal views only; no scapula/pelvis, no vessel version.
   Muscle groups are the E14.5 model's masses reused from E13.5 to E18.5;
   digit bones are generated rather than traced.
