@@ -154,3 +154,15 @@ graph test validates structure.
 Adding an icon: append a `LibraryItem` to the relevant `src/library/items/*.ts`
 module (see `src/library/types.ts` for the SVG rules) and run `npm test`; the
 registry test validates every icon.
+
+## Credits
+
+The developmental-stage icons are derived from open resources: the mouse embryo
+silhouettes from the eMouseAtlas Theiler stage plates
+(https://www.emouseatlas.org/emap/ema/theiler_stages/, Edinburgh Mouse Atlas
+Project, CC BY 3.0) and the limb bone and muscle shapes from the eMouseAtlas
+E14.5 limb models (DeLaurier A, Burton N, Bennett M, et al. The Mouse Limb
+Anatomy Atlas. BMC Dev Biol 2008;8:83; University of Edinburgh DataShare, CC BY).
+Limb proportions follow Martin P (Int J Dev Biol 1990;34:323) and Rafipay A, et
+al. (Dev Dyn 2018;247:1217); the camera lucida style follows Carter (1954) as
+reproduced in Grüneberg, The Pathology of Development (1963).

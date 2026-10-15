@@ -30,6 +30,33 @@ All notable changes to DiagramIt are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-15
+
+### Changed
+
+- Mouse embryo icons are traced from the eMouseAtlas Theiler stage plates
+  (TS17 to TS26, CC BY 3.0): real lateral silhouettes with the plates' feature
+  lines, a pigmented eye or lens ring, fusing then fused eyelids, and vibrissa
+  follicles on the snout from E13.5. Icons are scaled to crown-rump length
+  (90 px tall at E10.5 to 175 px at E18.5) with outlines about 1.3 px.
+- Mouse limb silhouettes are authored from width stations and a digit fan
+  (`scripts/limbs/author.py`) against Rafipay 2018, Martin 1990 and the
+  eMouseAtlas models: a convex thigh, a palm that widens into the digit bases,
+  tapered digits with rounded tips, scalloped plates at E12.5 to E13.5.
+- Skeletal elements follow real cartilage contours: femur, tibia, fibula,
+  humerus, radius, ulna and metapodials come from the eMouseAtlas E14.5 limb
+  models (DeLaurier et al. 2008, CC BY), mapped onto every stage; phalanges are
+  waisted; outlines are thin (0.55 units). Muscle groups from E13.5 are the
+  model's muscle masses mapped into each stage and tiled without overlap.
+- The apical ectodermal ridge is a crescent that tapers into the surface
+  ectoderm at both ends in all three styles; the marginal sinus runs inside it.
+- Thinner lines throughout the developmental icons: limb outline 1.2 units
+  (was 2.5), camera lucida outline 0.8, nerves and tendons slimmer.
+
+### Removed
+
+- The parametric limb silhouette engine and the hand-authored embryo models.
+
 ## [0.9.0] - 2026-10-14
 
 ### Changed

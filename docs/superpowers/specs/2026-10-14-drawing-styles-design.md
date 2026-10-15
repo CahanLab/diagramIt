@@ -229,6 +229,87 @@ Still not addressed: embryo silhouettes were not changed in this phase; the
 limbs remain dorsal views laid out nearly straight, whereas the E15.5 render
 shows the elbow and knee strongly flexed.
 
+## Reference-built limbs and traced embryos (2026-10-15, phase 5)
+
+Owner's verdict on 0.9.0: "unusable as is": embryo limbs like sausages, three-line
+whiskers, wrong overall shapes; limb outlines too thick; the AER's outer edge ending
+abruptly instead of tapering into the surface ectoderm; cartilage drawn as thick-edged
+geometric capsules rather than tissue contours. The owner asked for a broad search for
+better reference imagery and a revamp.
+
+### References found and used
+
+- **eMouseAtlas Theiler stage plates** TS17 to TS26 (line drawings, CC BY 3.0):
+  traced into the nine embryo silhouettes plus their feature lines
+  (`scripts/embryos/`, output `items/embryos/traced.ts`).
+- **eMouseAtlas 3D embryo models** (University of Edinburgh DataShare, NIfTI volumes
+  for TS17 to TS26): rendered as lateral depth images and traced; used only as a
+  cross-check of the plates (the volume silhouettes carry scan artefacts and curled
+  limbs) and for proportions.
+- **eMouseAtlas E14.5 limb models** EMA108/EMA109 (DeLaurier et al. 2008, BMC Dev Biol
+  8:83, CC BY): the STL surfaces of every bone and muscle. Bones were split into
+  connected components and projected on their own principal planes to give the
+  femur, tibia, fibula, humerus, radius, ulna and metapodial outlines used at every
+  stage (`BONE_SHAPES`); muscles were grouped into nine masses per limb and
+  projected dorsally (`scripts/limbs/data/`).
+- **Rafipay et al. 2018** Figs 5 and 6 (neurofilament and Alcian blue whole mounts,
+  E11.5 to E16.5) and **Martin 1990** SEM series (E9.5 to E14.5): traced for limb
+  proportions (segment lengths, plate width, digit lengths and widths); the traced
+  photographs themselves were too flexed and ragged to use as silhouettes.
+- Carter 1954 (Grüneberg 1963) E12.5 hindlimb and E14 embryos as before.
+
+### Limbs
+
+- Silhouettes are authored in `scripts/limbs/author.py` as width stations along a
+  bent centreline (stylopod, zeugopod, palm) plus a fan of tapered digits, and
+  exported to `items/limbs/shapes.ts` (open outline, margin range, landmarks, rays,
+  flank, muscle groups). The palm widens on a sine profile to meet the outer digits'
+  bases; digits have rounded tips, clefts drawn from the adjacent digit sides, and
+  are never wider than 0.44 of the base spacing. Scalloped plates (web ≥ 0.75) use
+  apex and cleft points only. The former parametric engine (`buildLimb`) is gone.
+- Bones: `Element` carries `shape` (contour path) and `polygon` besides the axis.
+  Long bones and metapodials map the E14.5 outlines onto each stage's segments by a
+  similarity transform with a per-stage width factor (1.4 at E11.5 to 0.9 at E18.5,
+  cartilage anlagen being chunky early); phalanges are waisted shapes; carpals and
+  tarsals a cluster of five rounded elements. Sleeve and ossification bands are the
+  element polygon clipped to the middle 40 % of its axis.
+- Muscles from E13.5 are the model's muscle groups mapped segment-wise into the
+  stage and clipped to the silhouette, superficial groups first so they tile without
+  overlap; E11.5 to E12.5 keep the premuscle masses.
+- Line weights (viewBox units, icons about 100 units long): basic outline 1.2, bone
+  contour 0.55, muscle 0.5; lucida outline 0.8, bone 0.45, hatch 0.45, vessels
+  capped at 0.9; realistic rim 0.6.
+- AER: `LimbStage.aerBand` is a crescent just inside the margin whose height
+  `h(s) = H·sin(πs/L)^0.6` falls to zero at both ends, so the ridge rises from and
+  sinks back into the surface ectoderm. Basic fills it; lucida draws its inner edge
+  and the cell boundaries as ticks that shorten with the height; realistic fills it
+  translucent white. The marginal sinus now runs 3.4 units inside the margin.
+
+### Embryos
+
+- `items/embryos/items.ts` builds each model from the traced plate (body silhouette,
+  feature lines tagged `detail`) and `features.ts` (eye or lens ring, fusing or fused
+  eyelids, vibrissa follicles as a lattice clipped to an ellipse on the snout,
+  from E13.5). The hand-authored `e10-e12.ts`, `e13-e15.ts`, `e16-e18.ts` are
+  deleted.
+- Scale: 8 viewBox units per mm of crown-rump length; default insert height
+  70 + 5·CRL px (90 px at E10.5, 175 px at E18.5). `EmbryoModel.strokeWidth` makes
+  the outline about 1.3 px at that size; features are 0.7 of it; lucida and realistic
+  derive their widths and stipple spacing from it.
+- Lucida tone shades along every feature line (weaker than along limbs and tail),
+  with far lines culled by bounding box so the field renders in under 0.25 s.
+- Plate lines that hug the silhouette within 1.3 units (the plates' double contour)
+  are dropped at export.
+
+### Known gaps
+
+- Embryo bodies are flat fills; the plates give no internal organs, so the realistic
+  style shows no heart or liver.
+- Muscle groups are projections of a flexed E14.5 model straightened per segment;
+  their boundaries are approximate and the same groups are reused from E13.5 to
+  E18.5 scaled.
+- Digit bones are generated, not traced (the model's phalanx meshes are too coarse).
+
 ## Out of scope
 
 - Styles for icons outside the Developmental stages category.

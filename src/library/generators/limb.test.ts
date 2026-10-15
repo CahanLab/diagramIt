@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { availableVersions, limbDefaultSize, limbSvg, LIMB_COLORS } from './limb'
-import type { LimbStage } from '../items/limbs/types'
+import type { Element, LimbStage } from '../items/limbs/types'
 import { validateItem } from '../validate'
+
+/** capsule element with its outline as a rectangle polygon */
+const el = (name: Element['name'], state: Element['state'], p: [number, number], d: [number, number], r: number, digit?: Element['digit']): Element => {
+  const polygon: [number, number][] = [[p[0], p[1] - r], [d[0], d[1] - r], [d[0], d[1] + r], [p[0], p[1] + r]]
+  const e: Element = { name, state, p, d, r, polygon, shape: polygon.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join('') + 'z' }
+  if (digit) e.digit = digit
+  return e
+}
 
 const fixture: LimbStage = {
   limb: 'forelimb',
@@ -11,17 +19,19 @@ const fixture: LimbStage = {
   viewBox: '0 0 160 100',
   outline: 'M10 30h120v40H10z',
   outlineOpen: 'M10 30h120v40H10',
+  polygon: [[10, 30], [130, 30], [130, 70], [10, 70]],
   flank: { anterior: [10, 30], posterior: [10, 70], inward: [-1, 0] },
   landmarks: { shoulder: [10, 50], elbow: [50, 52], wrist: [92, 50], stylopodWidth: 12, zeugopodWidth: 10 },
   aer: 'M130 30v40',
+  aerBand: 'M130 30v40l2-20z',
   hairPlacodes: [[40, 40]],
   elements: [
-    { name: 'humerus', state: 'cartilage', p: [14, 50], d: [50, 50], r: 6 },
-    { name: 'metacarpal', digit: 3, state: 'condensation', p: [100, 44], d: [120, 42], r: 3 },
-    { name: 'radius', state: 'ossifying', p: [54, 46], d: [92, 44], r: 4 },
-    { name: 'ulna', state: 'sleeve', p: [54, 58], d: [92, 58], r: 4 },
+    el('humerus', 'cartilage', [14, 50], [50, 50], 6),
+    el('metacarpal', 'condensation', [100, 44], [120, 42], 3, 3),
+    el('radius', 'ossifying', [54, 46], [92, 44], 4),
+    el('ulna', 'sleeve', [54, 58], [92, 58], 4),
   ],
-  muscles: [{ name: 'biceps', path: 'M20 40c10-6 20-6 30 0c-10 6-20 6-30 0z' }],
+  muscles: [{ name: 'biceps', path: 'M20 40c10-6 20-6 30 0c-10 6-20 6-30 0z', polygon: [[20, 40], [35, 36], [50, 40], [35, 44]] }],
   tendons: [{ name: 'edc', path: 'M60 44L120 40' }],
   nerves: [{ name: 'radial', path: 'M12 46L90 44', width: 3 }],
 }
@@ -42,7 +52,7 @@ describe('limbSvg', () => {
     const s = limbSvg(fixture, 'skeleton')
     expect(s).toContain('class="el humerus cartilage"')
     expect(s).toContain('class="el metacarpal-3 condensation"')
-    expect(s.match(/stroke-opacity="0.4"/g)?.length).toBe(1)
+    expect(s).toContain(`fill-opacity="${LIMB_COLORS.condensationOpacity}"`)
     expect(s.match(new RegExp(LIMB_COLORS.ossifying, 'g'))?.length).toBe(1)
     expect(s.match(new RegExp(LIMB_COLORS.sleeve, 'g'))?.length).toBe(1)
     expect(s).not.toContain(LIMB_COLORS.muscle)

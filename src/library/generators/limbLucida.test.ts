@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { hatchEllipse, limbLucidaSvg, stippleCapsule } from './limbLucida'
+import { limbLucidaSvg, LUCIDA } from './limbLucida'
+import { hatchPolygon } from './tone'
 import { availableVersions } from './limb'
 import { forelimb } from '../items/limbs/forelimb'
 import { hindlimb } from '../items/limbs/hindlimb'
@@ -26,20 +27,35 @@ describe('limbLucidaSvg', () => {
     const s = forelimb[4]!
     expect(limbLucidaSvg(s, 'skeleton')).toBe(limbLucidaSvg(s, 'skeleton'))
   })
-  it('stipples condensations more sparsely than cartilage', () => {
-    const e = { name: 'humerus' as const, state: 'cartilage' as const, p: [10, 10] as [number, number], d: [50, 10] as [number, number], r: 5 }
-    const dense = stippleCapsule(e, 1.4, false, () => 0.5).split('h0.01').length
-    const sparse = stippleCapsule({ ...e, state: 'condensation' }, 2.6, true, () => 0.5).split('h0.01').length
-    expect(dense).toBeGreaterThan(sparse * 2)
+  it('draws cartilage with its contour and stipple, condensations without a contour', () => {
+    const s = forelimb.find((x) => x.stage === 'E13.5')!
+    const svg = limbLucidaSvg(s, 'skeleton')
+    const cartilage = /<g class="el humerus cartilage">(.*?)<\/g>/.exec(svg)![1]!
+    expect(cartilage).toContain(`stroke-width="${LUCIDA.bone}"`)
+    expect(cartilage.split('h0.01').length).toBeGreaterThan(20)
+    const cond = /<g class="el distal-phalanx-3 condensation">(.*?)<\/g>/.exec(svg)![1]!
+    expect(cond).not.toContain('fill="#ffffff"')
   })
-  it('hatches within the ellipse', () => {
-    const d = hatchEllipse({ c: [50, 50], rx: 10, ry: 5, angle: 0 }, 2)
+  it('AER outer edge is absent at the margin ends (the ridge tapers into the ectoderm)', () => {
+    const s = forelimb.find((x) => x.stage === 'E12.5')!
+    expect(s.aerBand).toBeDefined()
+    const svg = limbLucidaSvg(s, 'outline')
+    expect(svg).toContain('stroke-width="0.6"')
+  })
+  it('thin outline', () => {
+    expect(LUCIDA.outline).toBeLessThanOrEqual(0.8)
+  })
+})
+
+describe('hatchPolygon', () => {
+  it('keeps every segment inside the polygon', () => {
+    const d = hatchPolygon([[40, 45], [60, 45], [60, 55], [40, 55]], 30, 2)
     const nums = d.match(/-?\d+(\.\d+)?/g)!.map(Number)
     for (let i = 0; i < nums.length; i += 2) {
-      expect(nums[i]).toBeGreaterThanOrEqual(39)
-      expect(nums[i]).toBeLessThanOrEqual(61)
-      expect(nums[i + 1]).toBeGreaterThanOrEqual(44)
-      expect(nums[i + 1]).toBeLessThanOrEqual(56)
+      expect(nums[i]).toBeGreaterThanOrEqual(39.9)
+      expect(nums[i]).toBeLessThanOrEqual(60.1)
+      expect(nums[i + 1]).toBeGreaterThanOrEqual(44.9)
+      expect(nums[i + 1]).toBeLessThanOrEqual(55.1)
     }
     expect(d.split('M').length).toBeGreaterThan(5)
   })

@@ -1,8 +1,12 @@
 /**
- * Mouse limb stage icon generator. Pure: LimbStage data in, SVG string out.
+ * Mouse limb stage icon generator (basic style). Pure: LimbStage data in, SVG string out.
+ * Thin outline, cartilage elements drawn with their contour, muscle groups as filled
+ * shapes, the apical ectodermal ridge as a crescent that tapers into the ectoderm.
  * Spec: docs/superpowers/specs/2026-10-14-mouse-embryo-limb-icons-design.md
  */
 import type { Element, LimbStage, LimbVersion, Nerve } from '../items/limbs/types'
+import { diaphysisBand } from '../items/limbs/build'
+import { polygon } from '../items/limbs/geometry'
 import { OUTLINE } from '../types'
 
 export const LIMB_COLORS = {
@@ -16,48 +20,38 @@ export const LIMB_COLORS = {
   aer: '#c9a57c',
 } as const
 
-const NERVE_WIDTH: Record<Nerve['width'], number> = { 1: 1.2, 2: 2, 3: 3 }
+/** Line widths in viewBox units (icons are about 100 units long). */
+export const BASIC = { outline: 1.2, bone: 0.55, muscle: 0.5, feature: 0.7 } as const
+
+const NERVE_WIDTH: Record<Nerve['width'], number> = { 1: 1, 2: 1.5, 3: 2.2 }
 
 const n = (v: number): string => {
   const s = v.toFixed(1)
   return s.endsWith('.0') ? s.slice(0, -2) : s
 }
-const seg = (a: [number, number], b: [number, number]): string => `M${n(a[0])} ${n(a[1])}L${n(b[0])} ${n(b[1])}`
-
-/** Band across the mid-diaphysis covering the middle 40 % of the element. */
-function band(e: Element, colour: string, outlined = false): string {
-  const dx = e.d[0] - e.p[0]
-  const dy = e.d[1] - e.p[1]
-  const mx = (e.p[0] + e.d[0]) / 2
-  const my = (e.p[1] + e.d[1]) / 2
-  const a: [number, number] = [mx - dx * 0.2, my - dy * 0.2]
-  const b: [number, number] = [mx + dx * 0.2, my + dy * 0.2]
-  const fill = `<path d="${seg(a, b)}" stroke="${colour}" stroke-width="${n(e.r * 2)}" stroke-linecap="butt"/>`
-  if (!outlined) return fill
-  const nx = -(e.d[1] - e.p[1]) / (Math.hypot(dx, dy) || 1)
-  const ny = (e.d[0] - e.p[0]) / (Math.hypot(dx, dy) || 1)
-  const edge = (s: number): string => seg([a[0] + nx * e.r * s, a[1] + ny * e.r * s], [b[0] + nx * e.r * s, b[1] + ny * e.r * s])
-  return `${fill}<path d="${edge(1)}${edge(-1)}" stroke-width="1"/>`
-}
 
 function element(e: Element): string {
   const cls = `el ${e.name}${e.digit ? `-${e.digit}` : ''} ${e.state}`
-  const line = seg(e.p, e.d)
   if (e.state === 'condensation') {
-    return `<g class="${cls}"><path d="${line}" stroke="#SECONDARY" stroke-width="${n(e.r * 2)}" stroke-opacity="${LIMB_COLORS.condensationOpacity}"/></g>`
+    // a blastema has no sharp edge: a soft halo around a denser core
+    return (
+      `<g class="${cls}">` +
+      `<path d="${e.shape}" fill="#SECONDARY" fill-opacity="${LIMB_COLORS.condensationOpacity * 0.45}" stroke="#SECONDARY" stroke-width="${n(e.r * 0.9)}" stroke-opacity="0.12"/>` +
+      `<path d="${e.shape}" fill="#SECONDARY" fill-opacity="${LIMB_COLORS.condensationOpacity}" stroke="none"/>` +
+      `</g>`
+    )
   }
-  const parts = [
-    `<path d="${line}" stroke-width="${n(e.r * 2 + 2.5)}"/>`,
-    `<path d="${line}" stroke="#SECONDARY" stroke-width="${n(e.r * 2)}"/>`,
-  ]
-  if (e.state === 'sleeve') parts.push(band(e, LIMB_COLORS.sleeve, true))
-  if (e.state === 'ossifying') parts.push(band(e, LIMB_COLORS.ossifying))
+  const parts = [`<path d="${e.shape}" fill="#SECONDARY" stroke-width="${BASIC.bone}"/>`]
+  if (e.state === 'sleeve' || e.state === 'ossifying') {
+    const band = diaphysisBand(e)
+    if (band.length > 2) parts.push(`<path d="${polygon(band)}" fill="${e.state === 'sleeve' ? LIMB_COLORS.sleeve : LIMB_COLORS.ossifying}" stroke-width="${BASIC.bone}"/>`)
+  }
   return `<g class="${cls}">${parts.join('')}</g>`
 }
 
 function nerve(nv: Nerve): string {
   const w = NERVE_WIDTH[nv.width]
-  return `<path d="${nv.path}" stroke-width="${n(w + 1.5)}"/><path d="${nv.path}" stroke="${LIMB_COLORS.nerve}" stroke-width="${n(w)}"/>`
+  return `<path d="${nv.path}" stroke-width="${n(w + 1)}"/><path d="${nv.path}" stroke="${LIMB_COLORS.nerve}" stroke-width="${n(w)}"/>`
 }
 
 export function availableVersions(stage: LimbStage): LimbVersion[] {
@@ -70,18 +64,19 @@ export function availableVersions(stage: LimbStage): LimbVersion[] {
 
 export function limbSvg(stage: LimbStage, version: LimbVersion): string {
   const parts: string[] = [`<path d="${stage.outline}" fill="#PRIMARY"/>`]
-  if (stage.aer) parts.push(`<path d="${stage.aer}" stroke="${LIMB_COLORS.aer}" stroke-width="3"/>`)
+  if (stage.aerBand) parts.push(`<path d="${stage.aerBand}" fill="${LIMB_COLORS.aer}" stroke="none"/>`)
+  else if (stage.aer) parts.push(`<path d="${stage.aer}" stroke="${LIMB_COLORS.aer}" stroke-width="2"/>`)
   for (const [x, y] of stage.hairPlacodes ?? []) {
-    parts.push(`<circle cx="${n(x)}" cy="${n(y)}" r="1.2" fill="${OUTLINE}" fill-opacity="0.45" stroke="none"/>`)
+    parts.push(`<circle cx="${n(x)}" cy="${n(y)}" r="1.1" fill="${OUTLINE}" fill-opacity="0.45" stroke="none"/>`)
   }
   if (stage.decor) parts.push(stage.decor)
   if (version !== 'outline') parts.push(...stage.elements.map(element))
   if (version === 'muscle') {
-    for (const m of stage.muscles) parts.push(`<path d="${m.path}" fill="${LIMB_COLORS.muscle}" fill-opacity="${LIMB_COLORS.muscleOpacity}" stroke-width="1.2"/>`)
-    for (const t of stage.tendons) parts.push(`<path d="${t.path}" stroke-width="4"/><path d="${t.path}" stroke="${LIMB_COLORS.tendon}" stroke-width="2.4"/>`)
+    for (const m of stage.muscles) parts.push(`<path d="${m.path}" fill="${LIMB_COLORS.muscle}" fill-opacity="${LIMB_COLORS.muscleOpacity}" stroke-width="${BASIC.muscle}"/>`)
+    for (const t of stage.tendons) parts.push(`<path d="${t.path}" stroke-width="3"/><path d="${t.path}" stroke="${LIMB_COLORS.tendon}" stroke-width="1.8"/>`)
   }
   if (version === 'nerves') parts.push(...stage.nerves.map(nerve))
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${stage.viewBox}"><g fill="none" stroke="${OUTLINE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${parts.join('')}</g></svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${stage.viewBox}"><g fill="none" stroke="${OUTLINE}" stroke-width="${BASIC.outline}" stroke-linejoin="round" stroke-linecap="round">${parts.join('')}</g></svg>`
 }
 
 /** Default insert size: 70 px wide at 0.9 mm (E10.5 forelimb bud) to 140 px at 6 mm (E18.5). */

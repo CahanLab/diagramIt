@@ -12,9 +12,7 @@ import { lazyRendering } from '../lazy'
 import type { LimbStage, LimbVersion, Stage } from './limbs/types'
 import { forelimb } from './limbs/forelimb'
 import { hindlimb } from './limbs/hindlimb'
-import { items as embryosEarly } from './embryos/e10-e12'
-import { items as embryosMid } from './embryos/e13-e15'
-import { items as embryosLate } from './embryos/e16-e18'
+import { items as embryos } from './embryos/items'
 
 const PRIMARY = '#e8c9a0'
 const CARTILAGE = '#5b8fd6'
@@ -65,6 +63,6 @@ export function limbItems(stages: LimbStage[]): LibraryItem[] {
   return out
 }
 
-export const embryoItems: LibraryItem[] = [...embryosEarly, ...embryosMid, ...embryosLate]
+export const embryoItems: LibraryItem[] = embryos
 
 export const items: LibraryItem[] = [...embryoItems, ...limbItems(forelimb), ...limbItems(hindlimb)]

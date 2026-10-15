@@ -26,7 +26,11 @@ export type ElementName =
 /** condensation = precartilaginous (Alcian negative); cartilage = Alcian positive; sleeve = periosteal bone collar; ossifying = Alizarin positive diaphysis. */
 export type ElementState = 'condensation' | 'cartilage' | 'sleeve' | 'ossifying'
 
-/** A skeletal element drawn as a capsule from proximal centre p to distal centre d with half-width r. */
+/**
+ * A skeletal element: its axis from proximal centre p to distal centre d with a nominal
+ * half-width r (used for bands, stipple density and tone), and its outline `shape` (closed
+ * path following the cartilage contour; see scripts/limbs/author.py and geometry.ts).
+ */
 export interface Element {
   name: ElementName
   digit?: 1 | 2 | 3 | 4 | 5
@@ -34,14 +38,17 @@ export interface Element {
   p: [number, number]
   d: [number, number]
   r: number
+  shape: string
+  /** the outline as a polygon, for stipple and tone */
+  polygon: [number, number][]
 }
 
 export interface Muscle {
   name: string
   /** closed path, filled */
   path: string
-  /** when the block is an ellipse: centre, semi-axes and axis angle (degrees), used for hatching */
-  ellipse?: { c: [number, number]; rx: number; ry: number; angle: number }
+  /** the outline as a polygon, for hatching */
+  polygon: [number, number][]
 }
 export interface Tendon {
   name: string
@@ -81,6 +88,10 @@ export interface LimbStage {
   landmarks: { shoulder: [number, number]; elbow: [number, number]; wrist: [number, number]; stylopodWidth: number; zeugopodWidth: number }
   /** open path along the distal margin while an apical ectodermal ridge is visible */
   aer?: string
+  /** the ridge as a closed crescent (tapering to the surface ectoderm at both ends) */
+  aerBand?: string
+  /** polygon of the silhouette, for tone and tests */
+  polygon: [number, number][]
   hairPlacodes?: [number, number][]
   /** raw SVG fragments drawn over the outline (claws, footpads, wrinkles), basic style */
   decor?: string

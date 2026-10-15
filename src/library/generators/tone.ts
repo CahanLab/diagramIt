@@ -369,3 +369,38 @@ export function resample(line: Polygon, step: number): { p: Pt; n: Pt }[] {
   }
   return out
 }
+
+// ----------------------------------------------------------------- hatching
+
+/**
+ * Parallel hatch lines across a polygon (even-odd), at `angle` degrees, `spacing` apart.
+ * Returns path data of the clipped segments.
+ */
+export function hatchPolygon(poly: Polygon, angle: number, spacing: number, inset = 0.4): string {
+  if (poly.length < 3) return ''
+  const a = (angle * Math.PI) / 180
+  const u: Pt = [Math.cos(a), Math.sin(a)]
+  const v: Pt = [-Math.sin(a), Math.cos(a)]
+  // rotate the polygon into the hatch frame: s along u, t along v
+  const rot = poly.map(([x, y]): Pt => [x * u[0] + y * u[1], x * v[0] + y * v[1]])
+  const [, t0, , t1] = bbox([rot])
+  const out: string[] = []
+  for (let t = t0 + spacing / 2; t < t1; t += spacing) {
+    const xs: number[] = []
+    for (let i = 0; i < rot.length; i++) {
+      const p = rot[i]!
+      const q = rot[(i + 1) % rot.length]!
+      if ((p[1] <= t && q[1] > t) || (q[1] <= t && p[1] > t)) xs.push(p[0] + ((t - p[1]) * (q[0] - p[0])) / (q[1] - p[1]))
+    }
+    xs.sort((m, n) => m - n)
+    for (let k = 0; k + 1 < xs.length; k += 2) {
+      const s0 = xs[k]! + inset
+      const s1 = xs[k + 1]! - inset
+      if (s1 - s0 < 0.6) continue
+      const p0: Pt = [s0 * u[0] + t * v[0], s0 * u[1] + t * v[1]]
+      const p1: Pt = [s1 * u[0] + t * v[0], s1 * u[1] + t * v[1]]
+      out.push(`M${f1(p0[0])} ${f1(p0[1])}L${f1(p1[0])} ${f1(p1[1])}`)
+    }
+  }
+  return out.join('')
+}

@@ -1,163 +1,74 @@
 /**
- * Camera lucida renderer for mouse limb stage icons: thin ink line, white
- * interior, open at the flank, skeleton as stipple whose density encodes
- * maturity, muscle as hatching, tendons as paired lines, nerves as solid ink
- * (after Grüneberg 1963, Fig. 28). Ink is #PRIMARY. Pure.
+ * Camera lucida renderer for mouse limb stage icons: thin ink line, white interior,
+ * open at the flank, skeleton as stipple inside the cartilage contours whose density
+ * encodes maturity, muscle groups as hatched shapes, tendons as paired lines, nerves as
+ * solid ink (after Grüneberg 1963, Fig. 28, and Carter 1954). Ink is #PRIMARY. Pure.
  * Spec: docs/superpowers/specs/2026-10-14-drawing-styles-design.md
  */
 import type { Element, LimbStage, LimbVersion, Muscle, Nerve } from '../items/limbs/types'
-import { distToPolygon, distToSegment, flattenPath, hash as hashStr, resample, stippleField, type Polygon } from './tone'
+import { diaphysisBand } from '../items/limbs/build'
+import { polygon } from '../items/limbs/geometry'
+import { distToPolygon, flattenPath, hash as hashStr, hatchPolygon, pointInPolygon, resample, stippleField, type Polygon } from './tone'
 
 export const LUCIDA = {
-  outline: 1.1,
+  outline: 0.8,
   /** tonal stipple over the mesenchyme (Carter 1954): grid spacing and dot diameters */
   toneSpacing: 1.5,
-  toneSizes: [0.55, 0.85, 1.2] as [number, number, number],
-  feature: 0.9,
-  dot: 0.9,
-  hatch: 0.7,
-  hatchSpacing: 2.2,
-  spacing: { condensation: 2.6, cartilage: 1.4, band: 0.9 },
-  nerveWidth: { 1: 0.8, 2: 1.2, 3: 1.8 } as Record<Nerve['width'], number>,
+  toneSizes: [0.5, 0.8, 1.1] as [number, number, number],
+  feature: 0.55,
+  bone: 0.45,
+  dot: 0.85,
+  hatch: 0.45,
+  hatchSpacing: 1.9,
+  spacing: { cartilage: 1.35, band: 0.9 },
+  nerveWidth: { 1: 0.6, 2: 0.9, 3: 1.4 } as Record<Nerve['width'], number>,
 } as const
 
 const n = (v: number): string => {
   const s = v.toFixed(1)
   return s.endsWith('.0') ? s.slice(0, -2) : s
 }
-
-/** Deterministic PRNG (mulberry32). */
-function rng(seed: number): () => number {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
 const hash = hashStr
 
-/**
- * Stipple inside a capsule from p to d with half-width r. `falloff` thins the
- * dots toward the edge and the ends (precartilaginous condensation); `inset`
- * keeps dots away from an outline. Returns path data of zero-length segments.
- */
-export function stippleCapsule(e: Element, spacing: number, falloff: boolean, random: () => number, inset = 0): string {
-  const dx = e.d[0] - e.p[0]
-  const dy = e.d[1] - e.p[1]
-  const L = Math.hypot(dx, dy) || 1
-  const u: [number, number] = [dx / L, dy / L]
-  const v: [number, number] = [u[1], -u[0]]
-  const r = Math.max(0.4, e.r - inset)
-  const out: string[] = []
-  for (let s = -r; s <= L + r; s += spacing) {
-    for (let t = -r; t <= r; t += spacing) {
-      const ss = s + (random() - 0.5) * spacing * 0.9
-      const tt = t + (random() - 0.5) * spacing * 0.9
-      let inside: boolean
-      let endFactor = 0
-      if (ss < 0) {
-        inside = Math.hypot(ss, tt) < r
-        endFactor = Math.min(1, -ss / r)
-      } else if (ss > L) {
-        inside = Math.hypot(ss - L, tt) < r
-        endFactor = Math.min(1, (ss - L) / r)
-      } else inside = Math.abs(tt) < r
-      if (!inside) continue
-      if (falloff) {
-        const edge = Math.min(1, Math.abs(tt) / r)
-        const keep = (0.25 + 0.75 * (1 - edge * edge)) * (1 - 0.7 * endFactor)
-        if (random() > keep) continue
-      }
-      const x = e.p[0] + u[0] * ss + v[0] * tt
-      const y = e.p[1] + u[1] * ss + v[1] * tt
-      out.push(`M${n(x)} ${n(y)}h0.01`)
-    }
-  }
-  return out.join('')
-}
+const dots = (layers: { d: string; width: number }[]): string => layers.map((l) => `<path d="${l.d}" stroke-width="${l.width}" stroke-linecap="round"/>`).join('')
 
-/** Parallel hatch lines across an ellipse, clipped analytically. Returns path data. */
-export function hatchEllipse(el: NonNullable<Muscle['ellipse']>, spacing: number, angleOffset = 45): string {
-  const a = (el.angle * Math.PI) / 180
-  const u: [number, number] = [Math.cos(a), Math.sin(a)]
-  const v: [number, number] = [-Math.sin(a), Math.cos(a)]
-  const h = (angleOffset * Math.PI) / 180
-  // hatch direction and its perpendicular in the ellipse's local frame
-  const hd: [number, number] = [Math.cos(h), Math.sin(h)]
-  const pd: [number, number] = [-Math.sin(h), Math.cos(h)]
-  const R = Math.max(el.rx, el.ry)
-  const out: string[] = []
-  for (let k = -R; k <= R; k += spacing) {
-    // line: P(l) = k*pd + l*hd ; inside ellipse when (x/rx)^2 + (y/ry)^2 <= 1
-    const A = (hd[0] / el.rx) ** 2 + (hd[1] / el.ry) ** 2
-    const B = 2 * ((k * pd[0] * hd[0]) / el.rx ** 2 + (k * pd[1] * hd[1]) / el.ry ** 2)
-    const C = (k * pd[0] / el.rx) ** 2 + (k * pd[1] / el.ry) ** 2 - 1
-    const disc = B * B - 4 * A * C
-    if (disc <= 0) continue
-    const l1 = (-B - Math.sqrt(disc)) / (2 * A)
-    const l2 = (-B + Math.sqrt(disc)) / (2 * A)
-    const pt = (l: number): [number, number] => {
-      const lx = k * pd[0] + l * hd[0]
-      const ly = k * pd[1] + l * hd[1]
-      return [el.c[0] + u[0] * lx + v[0] * ly, el.c[1] + u[1] * lx + v[1] * ly]
-    }
-    const p1 = pt(l1 + 0.3)
-    const p2 = pt(l2 - 0.3)
-    if (Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) < 0.8) continue
-    out.push(`M${n(p1[0])} ${n(p1[1])}L${n(p2[0])} ${n(p2[1])}`)
-  }
-  return out.join('')
-}
-
-function capsuleOutline(e: Element, r = e.r): string {
-  const dx = e.d[0] - e.p[0]
-  const dy = e.d[1] - e.p[1]
-  const L = Math.hypot(dx, dy) || 1
-  const vx = (dy / L) * r
-  const vy = (-dx / L) * r
-  const a1 = [e.p[0] + vx, e.p[1] + vy]
-  const b1 = [e.d[0] + vx, e.d[1] + vy]
-  const b2 = [e.d[0] - vx, e.d[1] - vy]
-  const a2 = [e.p[0] - vx, e.p[1] - vy]
-  return `M${n(a1[0]!)} ${n(a1[1]!)}L${n(b1[0]!)} ${n(b1[1]!)}A${n(r)} ${n(r)} 0 0 1 ${n(b2[0]!)} ${n(b2[1]!)}L${n(a2[0]!)} ${n(a2[1]!)}A${n(r)} ${n(r)} 0 0 1 ${n(a1[0]!)} ${n(a1[1]!)}z`
-}
-
-/** Mid-diaphysis band (middle 40 %) as a sub-capsule element. */
-function bandOf(e: Element): Element {
-  const dx = e.d[0] - e.p[0]
-  const dy = e.d[1] - e.p[1]
-  const mx = (e.p[0] + e.d[0]) / 2
-  const my = (e.p[1] + e.d[1]) / 2
-  return { ...e, p: [mx - dx * 0.2, my - dy * 0.2], d: [mx + dx * 0.2, my + dy * 0.2] }
+/** Uniform stipple inside a polygon, kept `inset` away from its edge. */
+function stipplePolygon(poly: Polygon, spacing: number, seed: string, inset = 0.7, density = 0.92): string {
+  return dots(stippleField([poly], (x, y) => (distToPolygon([x, y], poly) < inset ? 0 : density), { spacing, seed: hash(seed), sizes: [LUCIDA.dot, LUCIDA.dot, LUCIDA.dot] }))
 }
 
 function element(e: Element, seed: string): string {
-  const random = rng(hash(seed))
-  const dots = (d: string): string => (d ? `<path d="${d}" stroke-width="${LUCIDA.dot}" stroke-linecap="round"/>` : '')
   const cls = `el ${e.name}${e.digit ? `-${e.digit}` : ''} ${e.state}`
   switch (e.state) {
     case 'condensation':
-      // the blastema is a density halo in the tonal field; a sparse core marks its axis
-      return `<g class="${cls}">${dots(stippleCapsule({ ...e, r: e.r * 0.55 }, LUCIDA.spacing.condensation, true, random))}</g>`
+      // the blastema is a density halo in the tonal field (see toneField); a sparse core marks its axis
+      return `<g class="${cls}">${dots(stippleField([e.polygon], (x, y) => 0.35 * Math.max(0, 1 - (distToPolygon([x, y], e.polygon) < 0.6 ? 1 : 0)), { spacing: 2.4, seed: hash(seed), sizes: [0.7, 0.7, 0.7] }))}</g>`
     case 'cartilage':
-      return `<g class="${cls}"><path d="${capsuleOutline(e)}" stroke-width="0.8"/>${dots(stippleCapsule(e, LUCIDA.spacing.cartilage, false, random, 0.9))}</g>`
-    case 'sleeve': {
-      const band = bandOf(e)
-      return `<g class="${cls}"><path d="${capsuleOutline(e)}" stroke-width="0.8"/>${dots(stippleCapsule(e, LUCIDA.spacing.cartilage, false, random, 0.9))}<path d="${capsuleOutline(band, e.r + 0.6)}" fill="#ffffff" stroke-width="0.8"/></g>`
-    }
+      return `<g class="${cls}"><path d="${e.shape}" fill="#ffffff" stroke-width="${LUCIDA.bone}"/>${stipplePolygon(e.polygon, LUCIDA.spacing.cartilage, seed)}</g>`
+    case 'sleeve':
     case 'ossifying': {
-      const band = bandOf(e)
-      return `<g class="${cls}"><path d="${capsuleOutline(e)}" stroke-width="0.8"/>${dots(stippleCapsule(e, LUCIDA.spacing.cartilage, false, random, 0.9))}<path d="${capsuleOutline(band, e.r + 0.6)}" fill="#ffffff" stroke-width="0.8"/>${dots(stippleCapsule(band, LUCIDA.spacing.band, false, random, 0.5))}</g>`
+      const band = diaphysisBand(e)
+      const bandPath = band.length > 2 ? `<path d="${polygon(band)}" fill="#ffffff" stroke-width="${LUCIDA.bone}"/>` : ''
+      const fill = e.state === 'ossifying' && band.length > 2 ? stipplePolygon(band, LUCIDA.spacing.band, seed + ':band', 0.4, 1) : ''
+      return `<g class="${cls}"><path d="${e.shape}" fill="#ffffff" stroke-width="${LUCIDA.bone}"/>${stipplePolygon(e.polygon, LUCIDA.spacing.cartilage, seed)}${bandPath}${fill}</g>`
     }
   }
 }
 
-function muscle(m: Muscle): string {
-  if (m.ellipse) return `<path d="${m.path}" stroke-width="${LUCIDA.feature}"/><path d="${hatchEllipse(m.ellipse, LUCIDA.hatchSpacing)}" stroke-width="${LUCIDA.hatch}"/>`
-  return `<path d="${m.path}" stroke-width="${LUCIDA.feature}"/>`
+function muscle(m: Muscle, i: number): string {
+  // hatch direction follows the muscle's long axis, offset by 40 degrees
+  const [x0, y0] = m.polygon[0] ?? [0, 0]
+  let far: [number, number] = [x0, y0]
+  let best = 0
+  for (const p of m.polygon) {
+    const d = Math.hypot(p[0] - x0, p[1] - y0)
+    if (d > best) {
+      best = d
+      far = p
+    }
+  }
+  const angle = (Math.atan2(far[1] - y0, far[0] - x0) * 180) / Math.PI + (i % 2 ? 40 : -40)
+  return `<path d="${m.path}" fill="#ffffff" stroke-width="${LUCIDA.feature}"/><path d="${hatchPolygon(m.polygon, angle, LUCIDA.hatchSpacing)}" stroke-width="${LUCIDA.hatch}"/>`
 }
 
 function flankExtensions(stage: LimbStage): string {
@@ -183,55 +94,65 @@ function toneField(stage: LimbStage, version: LimbVersion, poly: Polygon): strin
     // the proximal cut is not a surface edge: fade the edge term out within 8 units of the flank
     const flankFade = Math.min(1, (along * axisLen) / 8)
     const edge = Math.max(0, 1 - distToPolygon(p, poly) / 6) * flankFade
-    let t = 0.08 + 0.1 * (1 - along) + 0.62 * Math.pow(edge, 1.6)
+    let t = 0.08 + 0.1 * (1 - along) + 0.6 * Math.pow(edge, 1.6)
     for (const e of elements) {
-      const d = distToSegment(p, e.p, e.d) - e.r
+      const inside = pointInPolygon(p, e.polygon)
+      const d = inside ? 0 : distToPolygon(p, e.polygon)
       if (e.state === 'condensation') {
-        t += 0.75 * Math.exp(-Math.pow(Math.max(0, d) / (e.r * 1.1), 2))
+        t += 0.7 * Math.exp(-Math.pow(d / (e.r * 1.1), 2))
       } else {
-        if (d < 0) return 0
-        t += 0.4 * Math.exp(-Math.pow(d / (e.r * 0.8), 2))
+        if (inside) return 0
+        t += 0.35 * Math.exp(-Math.pow(d / (e.r * 0.8), 2))
       }
     }
     return Math.min(1, t)
   }
-  const layers = stippleField([poly], tone, { spacing: LUCIDA.toneSpacing, seed: hash(`${stage.limb}:${stage.stage}:${version}:tone`), sizes: LUCIDA.toneSizes })
-  return layers.map((l) => `<path d="${l.d}" stroke-width="${l.width}" stroke-linecap="round"/>`).join('')
+  return dots(stippleField([poly], tone, { spacing: LUCIDA.toneSpacing, seed: hash(`${stage.limb}:${stage.stage}:${version}:tone`), sizes: LUCIDA.toneSizes }))
 }
 
-/** The apical ectodermal ridge as a band of epithelial cells: two parallel lines with cell boundaries between them. */
-function aerBand(aer: string): string {
+/**
+ * The apical ectodermal ridge as a band of epithelial cells: the margin line, an outer edge
+ * that rises from the surface ectoderm and sinks back into it, and cell boundaries between.
+ */
+function aerBand(aer: string, band: string): string {
   const line = flattenPath(aer)[0]?.points
-  if (!line || line.length < 2) return ''
+  const crescent = flattenPath(band)[0]?.points
+  if (!line || line.length < 2 || !crescent) return ''
   const samples = resample(line, 1.3)
-  const inner: string[] = []
-  const outer: string[] = []
+  const cum: number[] = [0]
+  for (let i = 1; i < line.length; i++) cum.push(cum[i - 1]! + Math.hypot(line[i]![0] - line[i - 1]![0], line[i]![1] - line[i - 1]![1]))
+  const L = cum[cum.length - 1]! || 1
+  const total = samples.length
   const ticks: string[] = []
   samples.forEach(({ p, n: nn }, i) => {
-    const a: [number, number] = [p[0] - nn[0] * 0.2, p[1] - nn[1] * 0.2]
-    const b: [number, number] = [p[0] + nn[0] * 2, p[1] + nn[1] * 2]
-    inner.push(`${i ? 'L' : 'M'}${n(a[0])} ${n(a[1])}`)
-    outer.push(`${i ? 'L' : 'M'}${n(b[0])} ${n(b[1])}`)
+    const s = (i / Math.max(1, total - 1)) * L
+    const h = 2.2 * Math.pow(Math.sin((Math.PI * s) / L), 0.6)
+    if (h < 0.5) return
+    const a: [number, number] = [p[0] - nn[0] * 0.15, p[1] - nn[1] * 0.15]
+    const b: [number, number] = [p[0] - nn[0] * h, p[1] - nn[1] * h]
     ticks.push(`M${n(a[0])} ${n(a[1])}L${n(b[0])} ${n(b[1])}`)
   })
-  return `<path d="${inner.join('')}" stroke-width="0.8"/><path d="${outer.join('')}" stroke-width="0.8"/><path d="${ticks.join('')}" stroke-width="0.45"/>`
+  // outer edge: the far side of the crescent polygon (second half of its points)
+  const outer = crescent.slice(line.length).reverse()
+  const outerPath = outer.map((q, i) => `${i ? 'L' : 'M'}${n(q[0])} ${n(q[1])}`).join('')
+  return `<path d="${outerPath}" stroke-width="0.6"/><path d="${ticks.join('')}" stroke-width="0.4"/>`
 }
 
 export function limbLucidaSvg(stage: LimbStage, version: LimbVersion): string {
-  const poly = flattenPath(stage.outline)[0]?.points ?? []
+  const poly = stage.polygon
   const parts: string[] = [`<path d="${stage.outline}" fill="#ffffff" stroke="none"/>`, toneField(stage, version, poly)]
   if (version !== 'outline') parts.push(...stage.elements.map((e, i) => element(e, `${stage.limb}:${stage.stage}:${i}`)))
   if (version === 'skeleton') {
-    for (const v of stage.vessels ?? []) parts.push(`<path d="${v.path}" stroke-width="${n(v.width)}"${v.dash ? ` stroke-dasharray="${v.dash}"` : ''}/>`)
+    for (const v of stage.vessels ?? []) parts.push(`<path d="${v.path}" stroke-width="${n(Math.min(v.width, 0.9))}"${v.dash ? ` stroke-dasharray="${v.dash}"` : ''}/>`)
   }
   if (version === 'muscle') {
     parts.push(...stage.muscles.map(muscle))
-    for (const t of stage.tendons) parts.push(`<path d="${t.path}" stroke-width="3.2"/><path d="${t.path}" stroke="#ffffff" stroke-width="1.6"/>`)
+    for (const t of stage.tendons) parts.push(`<path d="${t.path}" stroke-width="2.4"/><path d="${t.path}" stroke="#ffffff" stroke-width="1.3"/>`)
   }
   if (version === 'nerves') for (const nv of stage.nerves) parts.push(`<path d="${nv.path}" stroke-width="${LUCIDA.nerveWidth[nv.width]}"/>`)
   parts.push(`<path d="${stage.outlineOpen}" stroke-width="${LUCIDA.outline}"/>`, flankExtensions(stage))
-  if (stage.aer) parts.push(aerBand(stage.aer))
-  for (const [x, y] of stage.hairPlacodes ?? []) parts.push(`<circle cx="${n(x)}" cy="${n(y)}" r="1" fill="#ffffff" stroke-width="0.6"/>`)
+  if (stage.aer && stage.aerBand) parts.push(aerBand(stage.aer, stage.aerBand))
+  for (const [x, y] of stage.hairPlacodes ?? []) parts.push(`<circle cx="${n(x)}" cy="${n(y)}" r="0.9" fill="#ffffff" stroke-width="0.5"/>`)
   if (stage.decorLucida) parts.push(stage.decorLucida)
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${stage.viewBox}"><g fill="none" stroke="#PRIMARY" stroke-width="${LUCIDA.outline}" stroke-linejoin="round" stroke-linecap="round">${parts.join('')}</g></svg>`
 }

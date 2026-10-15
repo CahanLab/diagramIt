@@ -1,57 +1,55 @@
 import { describe, expect, it } from 'vitest'
-import { buildLimb, PLATE_WEB, type LimbParams } from './geometry'
+import { clipToSlab, crescent, mapToSegment, phalanxShape, smoothOpen, type Pt } from './geometry'
 
-const hand = (web: number, tip?: number): LimbParams => ({
-  shoulder: [10, 40],
-  stylopod: { len: 30, angle: 10, width: 12, bulge: 0.1 },
-  zeugopod: { len: 26, angle: -4, width: 10 },
-  autopod: { angle: -6, palm: 22, width: 10, spacing: 9, arc: 2.5 },
-  digits: [
-    { angle: -26, len: 12, width: 4, tip },
-    { angle: -12, len: 20, width: 4, tip },
-    { angle: 0, len: 22, width: 4, tip },
-    { angle: 12, len: 20, width: 4, tip },
-    { angle: 26, len: 15, width: 4, tip },
-  ],
-  web,
+const sq: Pt[] = [[0, -0.2], [1, -0.2], [1, 0.2], [0, 0.2]]
+
+describe('mapToSegment', () => {
+  it('scales the unit frame onto the segment and keeps anterior up', () => {
+    const out = mapToSegment(sq, [10, 50], [30, 50])
+    expect(out[0]).toEqual([10, 46])
+    expect(out[1]).toEqual([30, 46])
+    expect(out[2]).toEqual([30, 54])
+  })
+  it('rotates with the segment and applies the across factor', () => {
+    const out = mapToSegment(sq, [0, 0], [0, 10], 0.5)
+    expect(out[0]![0]).toBeCloseTo(1, 5)
+    expect(out[0]![1]).toBeCloseTo(0, 5)
+    expect(out[2]![0]).toBeCloseTo(-1, 5)
+    expect(out[2]![1]).toBeCloseTo(10, 5)
+  })
 })
 
-const nodes = (d: string): number => (d.match(/[MC]/g) ?? []).length
+describe('phalanxShape', () => {
+  it('is waisted: narrower at the middle than at the ends', () => {
+    const pts = phalanxShape([0, 0], [20, 0], 2)
+    const half = (x: number) => Math.max(...pts.filter((p) => Math.abs(p[0] - x) < 0.5).map((p) => Math.abs(p[1])))
+    expect(half(10)).toBeLessThan(half(2.4))
+    expect(half(2.4)).toBeCloseTo(2, 5)
+  })
+})
 
-describe('buildLimb', () => {
-  it('closes the silhouette with a straight cut along the flank', () => {
-    const g = buildLimb(hand(0.2))
-    expect(g.outline).toBe(g.outlineOpen + 'z')
-    expect(g.outlineOpen.startsWith(`M${g.flank.anterior[0].toFixed(1).replace(/\.0$/, '')}`)).toBe(true)
+describe('clipToSlab', () => {
+  it('keeps the middle 40 % of a rectangle', () => {
+    const out = clipToSlab([[0, 0], [10, 0], [10, 4], [0, 4]], [0, 2], [10, 2], 0.3, 0.7)
+    const xs = out.map((p) => p[0])
+    expect(Math.min(...xs)).toBeCloseTo(3, 5)
+    expect(Math.max(...xs)).toBeCloseTo(7, 5)
+    expect(out.length).toBe(4)
   })
-  it('draws a bud as a dome whose width follows the bud profile', () => {
-    const g = buildLimb({ shoulder: [10, 40], stylopod: { len: 8, angle: 0, width: 10 }, zeugopod: { len: 6, angle: 0, width: 10 }, autopod: { angle: 0, palm: 10, width: 10, spacing: 0 }, digits: [], web: 1, bud: { base: 10, width: 14, at: 0.4 } })
-    expect(g.rays).toEqual([])
-    const [x0, y0, x1, y1] = g.bounds
-    expect(y1 - y0).toBeCloseTo(28, 1)
-    expect(x1 - x0).toBeCloseTo(24, 1)
-    expect(g.flank.anterior).toEqual([10, 30])
-    expect(g.flank.posterior).toEqual([10, 50])
-    expect(nodes(g.margin)).toBeGreaterThan(5)
+})
+
+describe('crescent', () => {
+  it('tapers to the line at both ends and bulges in the middle', () => {
+    const line: Pt[] = [[0, 0], [5, 0], [10, 0], [15, 0], [20, 0]]
+    const poly = crescent(line, 2, -1)
+    expect(poly.length).toBe(10)
+    // outer edge points (reversed) lie on the normal side of the line (negative y here) with height 0 at the ends
+    const outer = poly.slice(5)
+    expect(Math.abs(outer[0]![1])).toBeLessThan(1e-9)
+    expect(Math.abs(outer[4]![1])).toBeLessThan(1e-9)
+    expect(outer[2]![1]).toBeCloseTo(-2, 5)
   })
-  it('drops the digit bases on a quadratic arc', () => {
-    const g = buildLimb(hand(0.2))
-    const along = (i: number) => g.rays[i]!.base[0] * g.autopodDir[0] + g.rays[i]!.base[1] * g.autopodDir[1]
-    expect(along(2) - along(1)).toBeCloseTo(2.5, 1)
-    expect(along(2) - along(0)).toBeCloseTo(10, 1)
-  })
-  it('tapers digits to the tip fraction', () => {
-    const g = buildLimb(hand(0.2, 0.5))
-    g.rays.forEach((r) => expect(r.tipWidth).toBeCloseTo(2, 5))
-    expect(buildLimb(hand(0.2)).rays[0]!.tipWidth).toBe(4)
-  })
-  it('draws a webbed plate with a scalloped margin and separate digits with rounded tips', () => {
-    const plate = buildLimb(hand(PLATE_WEB))
-    const digits = buildLimb(hand(0.3))
-    // both margins run apex, cleft, apex ... (9 nodes for five digits)
-    expect(nodes(plate.margin)).toBe(9)
-    expect(nodes(digits.margin)).toBe(9)
-    // the plate outline has no tip side points, so it is shorter than the digit outline by four nodes per digit
-    expect(nodes(digits.outline) - nodes(plate.outline)).toBe(20)
+  it('makes a valid open spline path', () => {
+    expect(smoothOpen([[0, 0], [10, 0], [20, 5]])).toMatch(/^M0 0C/)
   })
 })

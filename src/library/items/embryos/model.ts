@@ -9,10 +9,10 @@
 import type { Stage } from '../limbs/types'
 import type { DrawingStyle } from '../../types'
 import { OUTLINE } from '../../types'
-import { distToPolygon, distToPolyline, flattenPath, hash, pointInPolygon, stippleField, type Polygon } from '../../generators/tone'
+import { bbox, distToPolygon, distToPolyline, flattenPath, hash, pointInPolygon, stippleField, type Polygon } from '../../generators/tone'
 
 export type EmbryoPartTag =
-  | 'body' | 'limb' | 'hand' | 'foot' | 'tail'
+  | 'body' | 'limb' | 'hand' | 'foot' | 'tail' | 'detail'
   | 'eye' | 'lens' | 'eyelid' | 'ear' | 'nasal' | 'arches' | 'somites'
   | 'heart' | 'hernia' | 'vibrissae' | 'whiskers' | 'wrinkles' | 'claws' | 'pads' | 'detail'
 
@@ -52,6 +52,8 @@ export interface EmbryoModel {
   theiler: number
   viewBox: string
   parts: EmbryoPart[]
+  /** outline width in viewBox units (about 1.3 px at the default insert size); feature lines are thinner */
+  strokeWidth: number
 }
 
 const wrapSvg = (viewBox: string, sw: number, body: string): string =>
@@ -103,19 +105,28 @@ function embryoTone(model: EmbryoModel): string {
   if (!body) return ''
   const poly = flattenPath(body.d, body.transform)[0]?.points
   if (!poly || poly.length < 3) return ''
-  const creases: { line: Polygon; hw: number; closed: boolean }[] = []
+  const k = model.strokeWidth / 2.5
+  const spacing = model.strokeWidth * 1.15
+  const reach = 4 * k
+  const creases: { line: Polygon; hw: number; closed: boolean; box: [number, number, number, number] }[] = []
   for (const p of model.parts) {
-    if (!['limb', 'hand', 'foot', 'tail', 'hernia'].includes(p.tag)) continue
-    for (const sub of flattenPath(p.d, p.transform)) {
-      if (p.draw === 'sausage') creases.push({ line: sub.points, hw: (p.w ?? 10) / 2, closed: false })
-      else if (p.draw === 'fill' || p.draw === 'fill-white') creases.push({ line: sub.points, hw: 0, closed: true })
+    if (!['limb', 'hand', 'foot', 'tail', 'hernia', 'detail'].includes(p.tag)) continue
+    for (const sub of flattenPath(p.d, p.transform, 4)) {
+      const [bx0, by0, bx1, by1] = bbox([sub.points])
+      const hw = p.draw === 'sausage' ? (p.w ?? 10) / 2 : 0
+      const pad = hw + reach * 2.2
+      const box: [number, number, number, number] = [bx0 - pad, by0 - pad, bx1 + pad, by1 + pad]
+      if (p.draw === 'sausage') creases.push({ line: sub.points, hw, closed: false, box })
+      else if (p.draw === 'fill' || p.draw === 'fill-white') creases.push({ line: sub.points, hw: 0, closed: true, box })
+      else if (p.draw === 'stroke') creases.push({ line: sub.points, hw: 0, closed: false, box })
     }
   }
   const tone = (x: number, y: number): number => {
     const q: [number, number] = [x, y]
-    const edge = Math.max(0, 1 - distToPolygon(q, poly) / 6)
+    const edge = Math.max(0, 1 - distToPolygon(q, poly) / (6 * k))
     let t = 0.06 + 0.7 * Math.pow(edge, 1.6)
     for (const c of creases) {
+      if (x < c.box[0] || y < c.box[1] || x > c.box[2] || y > c.box[3]) continue
       let d: number
       if (c.closed) {
         if (pointInPolygon(q, c.line)) return 0
@@ -124,44 +135,47 @@ function embryoTone(model: EmbryoModel): string {
         d = distToPolyline(q, c.line) - c.hw
         if (d < 0) return 0
       }
-      t += 0.75 * Math.exp(-Math.pow(d / 4.5, 2))
+      t += (c.hw || c.closed ? 0.75 : 0.5) * Math.exp(-Math.pow(d / reach, 2))
     }
     return Math.min(1, t)
   }
-  return stippleField([poly], tone, { spacing: LUCIDA.toneSpacing, seed: hash(`embryo:${model.stage}`), sizes: LUCIDA.toneSizes })
+  return stippleField([poly], tone, { spacing, seed: hash(`embryo:${model.stage}`), sizes: [0.42, 0.62, 0.85].map((v) => v * model.strokeWidth) as [number, number, number] })
     .map((l) => `<path d="${l.d}" stroke-width="${l.width}" stroke-linecap="round"/>`)
     .join('')
 }
 
-function lucidaPart(p: EmbryoPart, stage: Stage): string {
+function lucidaPart(p: EmbryoPart, stage: Stage, lw: number): string {
+  const outline = lw * 0.65
+  const feature = lw * 0.5
   switch (p.draw) {
     case 'fill':
       if (p.tag === 'body') return `<path d="${p.d}" fill="#ffffff" stroke="none"/>` // stroked after the tonal field
-      return `<path d="${p.d}" fill="#ffffff" stroke-width="${LUCIDA.outline}"/>`
+      return `<path d="${p.d}" fill="#ffffff" stroke-width="${outline}"/>`
     case 'fill-white':
     case 'ring-secondary':
-      return `<path d="${p.d}" fill="#ffffff" stroke-width="${LUCIDA.outline}"/>`
+      return `<path d="${p.d}" fill="#ffffff" stroke-width="${outline}"/>`
     case 'sausage': {
       const w = p.w ?? 10
       return `<path d="${p.d}" stroke-width="${w - 5 + 2 * LUCIDA.outline}"/><path d="${p.d}" stroke="#ffffff" stroke-width="${w - 5}"/>`
     }
     case 'fill-secondary': {
       // the pigmented eye is a ring with a pupil; the otic vesicle and pinna are outlined
-      if (p.tag !== 'eye') return `<path d="${p.d}" fill="#ffffff" stroke-width="${LUCIDA.feature}"/>`
+      if (p.tag !== 'eye') return `<path d="${p.d}" fill="#ffffff" stroke-width="${feature}"/>`
       const c = circleOf(p.d)
-      if (!c) return `<path d="${p.d}" fill="#PRIMARY" stroke-width="${LUCIDA.feature}"/>`
-      return `<path d="${p.d}" fill="#ffffff" stroke-width="${LUCIDA.feature}"/><circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${(c.r * 0.45).toFixed(1)}" fill="#PRIMARY" stroke="none"/>`
+      if (!c) return `<path d="${p.d}" fill="#PRIMARY" stroke-width="${feature}"/>`
+      return `<path d="${p.d}" fill="#ffffff" stroke-width="${feature}"/><circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${(c.r * 0.45).toFixed(1)}" fill="#PRIMARY" stroke="none"/>`
     }
     case 'fill-dark':
-      return `<path d="${p.d}" fill="#PRIMARY" stroke-width="${LUCIDA.feature}"/>`
+      return `<path d="${p.d}" fill="#PRIMARY" stroke-width="${feature}"/>`
     case 'dots':
       if (p.tag === 'vibrissae' && stage >= 'E13.5') {
-        return dotPositions(p.d).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.1" fill="#ffffff" stroke-width="0.55"/>`).join('')
+        const r = (p.w ?? LUCIDA.dot) * 0.6
+        return dotPositions(p.d).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="${r.toFixed(2)}" fill="#ffffff" stroke-width="${Math.max(0.2, r * 0.5).toFixed(2)}"/>`).join('')
       }
-      return `<path d="${p.d}" stroke-width="${LUCIDA.dot}" stroke-linecap="round"/>`
+      return `<path d="${p.d}" stroke-width="${p.w ?? LUCIDA.dot}" stroke-linecap="round"/>`
     case 'stroke':
     case 'stroke-secondary':
-      return `<path d="${p.d}" stroke-width="${LUCIDA.feature}"/>`
+      return `<path d="${p.d}" stroke-width="${p.w ?? feature}"/>`
     case 'stroke-white':
       return `<path d="${p.d}" stroke="#ffffff"${sw(p.w, 1.5)}/>`
   }
@@ -180,14 +194,14 @@ function circleOf(d: string): { cx: number; cy: number; r: number } | null {
 }
 
 /** Realistic: gradient-shaded tissue with a soft shadow, organs showing through, glossy eye. */
-function realisticPart(p: EmbryoPart, gradientId: string): string {
+function realisticPart(p: EmbryoPart, gradientId: string, lw: number): string {
   const w = p.w
   switch (p.draw) {
     case 'fill': {
       if (p.tag === 'body') {
         return (
           `<path d="${p.d}" fill="#000000" fill-opacity="0.1" stroke="none" transform="translate(1.5 2.5)"/>` +
-          `<path d="${p.d}" fill="url(#${gradientId})" stroke="#PRIMARYD" stroke-width="0.9" stroke-opacity="0.7"/>`
+          `<path d="${p.d}" fill="url(#${gradientId})" stroke="#PRIMARYD" stroke-width="${lw * 0.55}" stroke-opacity="0.7"/>`
         )
       }
       if (p.tag === 'hernia') return `<path d="${p.d}" fill="url(#${gradientId})" stroke="#PRIMARYD" stroke-width="0.7" stroke-opacity="0.6"/>`
@@ -205,6 +219,7 @@ function realisticPart(p: EmbryoPart, gradientId: string): string {
       if (p.tag === 'heart') return `<path d="${p.d}" fill="#c0392b" fill-opacity="0.2" stroke="#c0392b" stroke-width="1.1" stroke-opacity="0.35"/>`
       if (p.tag === 'somites') return `<path d="${p.d}" stroke="#PRIMARYD" stroke-width="1.1" stroke-opacity="0.5"/>`
       if (p.tag === 'whiskers') return `<path d="${p.d}" stroke="#1f2937" stroke-width="0.7" stroke-opacity="0.7"/>`
+      if (p.tag === 'detail') return `<path d="${p.d}" stroke="#PRIMARYD" stroke-width="${(w ?? lw * 0.7).toFixed(2)}" stroke-opacity="0.6"/>`
       if (p.tag === 'hand' || p.tag === 'foot') return `<path d="${p.d}" stroke="#PRIMARYD" stroke-width="${w ?? 2}" stroke-opacity="0.75"/>`
       return `<path d="${p.d}" stroke="#PRIMARYD" stroke-width="${Math.max(0.7, (w ?? 2.5) * 0.45)}" stroke-opacity="0.6"/>`
     case 'stroke-secondary':
@@ -233,14 +248,15 @@ function realisticPart(p: EmbryoPart, gradientId: string): string {
 export function renderEmbryo(model: EmbryoModel, style: DrawingStyle): string {
   switch (style) {
     case 'basic':
-      return wrapSvg(model.viewBox, 2.5, model.parts.map((p) => withTransform(p, basicPart(p))).join(''))
+      return wrapSvg(model.viewBox, model.strokeWidth, model.parts.map((p) => withTransform(p, basicPart(p))).join(''))
     case 'lucida': {
       const body = model.parts.find((p) => p.tag === 'body')
-      const parts = model.parts.map((p) => withTransform(p, lucidaPart(p, model.stage)))
+      const lw = model.strokeWidth
+      const parts = model.parts.map((p) => withTransform(p, lucidaPart(p, model.stage, lw)))
       // tonal field goes right after the body fill, the body outline right after the field
       const i = model.parts.findIndex((p) => p.tag === 'body')
-      if (body && i >= 0) parts.splice(i + 1, 0, embryoTone(model), withTransform(body, `<path d="${body.d}" stroke-width="${LUCIDA.outline}"/>`))
-      return wrapSvg(model.viewBox, LUCIDA.outline, parts.join('')).replace(`stroke="${OUTLINE}"`, 'stroke="#PRIMARY"')
+      if (body && i >= 0) parts.splice(i + 1, 0, embryoTone(model), withTransform(body, `<path d="${body.d}" stroke-width="${(lw * 0.65).toFixed(2)}"/>`))
+      return wrapSvg(model.viewBox, lw * 0.65, parts.join('')).replace(`stroke="${OUTLINE}"`, 'stroke="#PRIMARY"')
     }
     case 'realistic': {
       const gid = `re-${model.stage.toLowerCase().replace('.', '-')}-body`
@@ -248,8 +264,8 @@ export function renderEmbryo(model: EmbryoModel, style: DrawingStyle): string {
         `<defs><radialGradient id="${gid}" cx="0.45" cy="0.3" r="0.8">` +
         `<stop offset="0" stop-color="#PRIMARYL"/><stop offset="0.55" stop-color="#PRIMARY"/><stop offset="1" stop-color="#PRIMARYD"/>` +
         `</radialGradient></defs>`
-      const body = model.parts.map((p) => withTransform(p, realisticPart(p, gid))).join('')
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${model.viewBox}">${defs}<g fill="none" stroke="${OUTLINE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${body}</g></svg>`
+      const body = model.parts.map((p) => withTransform(p, realisticPart(p, gid, model.strokeWidth))).join('')
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${model.viewBox}">${defs}<g fill="none" stroke="${OUTLINE}" stroke-width="${model.strokeWidth}" stroke-linejoin="round" stroke-linecap="round">${body}</g></svg>`
     }
   }
 }
